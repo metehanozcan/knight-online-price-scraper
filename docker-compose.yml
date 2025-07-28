@@ -1,0 +1,11 @@
+version: '3'
+services:
+  ko-scraper:
+    build: .
+    container_name: knight-online-price-scraper
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
