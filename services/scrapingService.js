@@ -869,51 +869,52 @@ async scrapeBynogame() {
         }
     }
 
-    getPriceData() {
-        return {
-            data: this.priceData,
-            lastUpdate: this.lastUpdate,
-            isUpdating: this.isUpdating
-        };
-    }
+  getPriceData() {
+    return {
+        data: this.priceData,
+        lastUpdate: this.lastUpdate,
+        isUpdating: this.isUpdating
+    };
+}
 
-    getBestPrices() {
-        const servers = ['Zero', 'Felis', 'Pandora', 'Agartha', 'Dryads', 'Destan', 'Minark', 'Oreads'];
-        const bestPrices = {};
+getBestPrices() {
+    const servers = ['Zero', 'Felis', 'Pandora', 'Agartha', 'Dryads', 'Destan', 'Minark', 'Oreads'];
+    const bestPrices = {};
 
-        servers.forEach(server => {
-            const serverPrices = [];
-            
-            Object.values(this.priceData).forEach(siteData => {
-                if (siteData.status === 'success') {
-                    const product = siteData.products.find(p => 
-                        p.server.toLowerCase() === server.toLowerCase()
-                    );
-                    if (product && product.buyPrice) {
-                        serverPrices.push({
-                            site: siteData.site,
-                            siteName: siteData.name,
-                            price: product.buyPrice * 100,
-                            sellPrice: product.sellPrice ? product.sellPrice * 100 : null,
-                            unit: product.unit
-                        });
-                    }
+    servers.forEach(server => {
+        const serverPrices = [];
+        
+        Object.values(this.priceData).forEach(siteData => {
+            if (siteData.status === 'success') {
+                const product = siteData.products.find(p => 
+                    p.server.toLowerCase() === server.toLowerCase()
+                );
+                if (product && product.buyPrice) {
+                    serverPrices.push({
+                        site: siteData.site,
+                        siteName: siteData.name,
+                        price: product.buyPrice * 100,
+                        sellPrice: product.sellPrice ? product.sellPrice * 100 : null,
+                        unit: product.unit
+                    });
                 }
-            });
-
-            if (serverPrices.length > 0) {
-                serverPrices.sort((a, b) => a.price - b.price);
-                bestPrices[server] = {
-                    best: serverPrices[0],
-                    all: serverPrices,
-                    average: serverPrices.reduce((sum, p) => sum + p.price, 0) / serverPrices.length,
-                    range: serverPrices[serverPrices.length - 1].price - serverPrices[0].price
-                };
             }
         });
 
-        return bestPrices;
-    }
+        if (serverPrices.length > 0) {
+            serverPrices.sort((a, b) => a.price - b.price);
+            bestPrices[server] = {
+                best: serverPrices[0],
+                all: serverPrices,
+                average: serverPrices.reduce((sum, p) => sum + p.price, 0) / serverPrices.length,
+                range: serverPrices[serverPrices.length - 1].price - serverPrices[0].price
+            };
+        }
+    });
+
+    return bestPrices;
+}
+
 }
 
 module.exports = new ScrapingService();
