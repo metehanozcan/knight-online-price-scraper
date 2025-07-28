@@ -330,31 +330,73 @@
             </div>
         </div>
 
-        <!-- Best Deal Card -->
-        <div id="best-price-card" class="glass-effect rounded-2xl p-6 sm:p-8 mb-6 sm:mb-8 text-center animate-fade-in">
-            <div class="inline-flex items-center px-4 py-2 rounded-full bg-gold/20 text-gold text-sm font-semibold mb-4 sm:mb-6">
-                <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
-                En İyi Fırsat
-            </div>
-            <div class="space-y-4">
-                <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-8">
-                    <div class="text-center">
-                        <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Alış Fiyatı</div>
-                        <div id="best-price-display" class="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-gold to-gold-dark bg-clip-text text-transparent animate-bounce-subtle">
+        <!-- Best Deal Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+            <!-- Best Buy Price Card -->
+            <div id="best-buy-card" class="glass-effect rounded-2xl p-6 sm:p-8 text-center animate-fade-in relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-emerald-600"></div>
+                <div class="inline-flex items-center px-4 py-2 rounded-full bg-green-500/20 text-green-600 dark:text-green-400 text-sm font-semibold mb-4 sm:mb-6">
+                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M7 18c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                    </svg>
+                    En Ucuz Alış
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">En Ucuz Alış Fiyatı</div>
+                        <div id="best-buy-price-display" class="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent animate-bounce-subtle">
                             Yükleniyor...
                         </div>
                     </div>
-                    <div class="text-center">
-                        <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Satış Fiyatı</div>
-                        <div id="best-sell-price-display" class="text-3xl sm:text-5xl font-bold text-green-600 dark:text-green-400">
-                            --
+                    <div id="best-buy-site-display" class="p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
+                        <div class="flex items-center justify-center space-x-3">
+                            <div id="best-buy-site-icon" class="w-10 h-10 rounded-xl bg-green-500 text-white flex items-center justify-center font-bold text-lg">
+                                ?
+                            </div>
+                            <div class="text-left">
+                                <div id="best-buy-site-name" class="text-lg font-bold text-green-700 dark:text-green-300">
+                                    Veriler getiriliyor...
+                                </div>
+                                <div id="best-buy-server-name" class="text-sm text-green-600 dark:text-green-400">
+                                    --
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div id="best-site-display" class="text-lg text-gray-600 dark:text-gray-400">
-                    Veriler getiriliyor...
+            </div>
+
+            <!-- Best Sell Price Card -->
+            <div id="best-sell-card" class="glass-effect rounded-2xl p-6 sm:p-8 text-center animate-fade-in relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-600"></div>
+                <div class="inline-flex items-center px-4 py-2 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 text-sm font-semibold mb-4 sm:mb-6">
+                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>
+                    </svg>
+                    En Yüksek Satış
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">En Yüksek Satış Fiyatı</div>
+                        <div id="best-sell-price-display" class="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent animate-bounce-subtle">
+                            --
+                        </div>
+                    </div>
+                    <div id="best-sell-site-display" class="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800">
+                        <div class="flex items-center justify-center space-x-3">
+                            <div id="best-sell-site-icon" class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center font-bold text-lg">
+                                ?
+                            </div>
+                            <div class="text-left">
+                                <div id="best-sell-site-name" class="text-lg font-bold text-blue-700 dark:text-blue-300">
+                                    Veriler getiriliyor...
+                                </div>
+                                <div id="best-sell-server-name" class="text-sm text-blue-600 dark:text-blue-400">
+                                    --
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -586,7 +628,7 @@
         }
 
         function calculateGBPrice(priceFor1M) {
-            return priceFor1M * 100;
+            return priceFor1M * 10;
         }
 
         function formatTime(timestamp) {
@@ -777,11 +819,8 @@
                 tbody.appendChild(row);
             });
 
-            // Update best price display
-            const bestProduct = filteredProducts[0];
-            document.getElementById('best-price-display').textContent = `${bestPrice.toFixed(2)} ₺`;
-            document.getElementById('best-sell-price-display').textContent = bestProduct.gbSellPrice ? `${bestProduct.gbSellPrice.toFixed(2)} ₺` : 'Mevcut Değil';
-            document.getElementById('best-site-display').textContent = `${bestProduct.siteName} - ${bestProduct.server} Sunucusu`;
+            // Update best price displays
+            updateBestDeals();
         }
 
         async function fetchPrices() {
@@ -792,6 +831,7 @@
         
         if (data.data) {
             updatePriceTable(data.data);
+            updateStatistics(data.data);
             updateLastUpdateTime(data.lastUpdate);
         }
     } catch (error) {
@@ -864,6 +904,85 @@
 
         function updateLastUpdateTime(timestamp) {
             document.getElementById('last-update').textContent = formatTime(timestamp);
+        }
+
+        function setLoadingState() {
+            // Unified loading state for both cards
+            document.getElementById('best-buy-price-display').textContent = 'Yükleniyor...';
+            document.getElementById('best-buy-site-name').textContent = 'Veriler getiriliyor...';
+            document.getElementById('best-buy-server-name').textContent = '--';
+            document.getElementById('best-buy-site-icon').textContent = '?';
+            
+            document.getElementById('best-sell-price-display').textContent = 'Yükleniyor...';
+            document.getElementById('best-sell-site-name').textContent = 'Veriler getiriliyor...';
+            document.getElementById('best-sell-server-name').textContent = '--';
+            document.getElementById('best-sell-site-icon').textContent = '?';
+        }
+
+        function updateBestDeals() {
+            if (filteredProducts.length === 0) {
+                // Unified empty state for both cards
+                document.getElementById('best-buy-price-display').textContent = 'Veri Yok';
+                document.getElementById('best-buy-site-name').textContent = 'Henüz veri alınamadı';
+                document.getElementById('best-buy-server-name').textContent = '--';
+                document.getElementById('best-buy-site-icon').textContent = '?';
+                
+                document.getElementById('best-sell-price-display').textContent = 'Veri Yok';
+                document.getElementById('best-sell-site-name').textContent = 'Henüz veri alınamadı';
+                document.getElementById('best-sell-server-name').textContent = '--';
+                document.getElementById('best-sell-site-icon').textContent = '?';
+                return;
+            }
+
+            // Find best buy price (cheapest)
+            const sortedByBuyPrice = [...filteredProducts].sort((a, b) => a.gbPrice - b.gbPrice);
+            const bestBuyProduct = sortedByBuyPrice[0];
+
+            // Find best sell price (highest) - only among products that have sell prices
+            const productsWithSellPrice = filteredProducts.filter(p => p.gbSellPrice !== null);
+            let bestSellProduct = null;
+            if (productsWithSellPrice.length > 0) {
+                const sortedBySellPrice = productsWithSellPrice.sort((a, b) => b.gbSellPrice - a.gbSellPrice);
+                bestSellProduct = sortedBySellPrice[0];
+            }
+
+            // Site colors mapping
+            const siteColors = {
+                'OyunFor': { bg: 'bg-blue-500', icon: 'O' },
+                'Kopazar': { bg: 'bg-green-500', icon: 'K' },
+                'ByNoGame': { bg: 'bg-purple-500', icon: 'B' },
+                'Yeşilyurt Game': { bg: 'bg-orange-500', icon: 'Y' },
+                'KlasGame': { bg: 'bg-pink-500', icon: 'G' }
+            };
+
+            // Update best buy display
+            if (bestBuyProduct) {
+                document.getElementById('best-buy-price-display').textContent = `${bestBuyProduct.gbPrice.toFixed(2)} ₺`;
+                document.getElementById('best-buy-site-name').textContent = bestBuyProduct.siteName;
+                document.getElementById('best-buy-server-name').textContent = `${bestBuyProduct.server} Sunucusu`;
+                
+                const siteColor = siteColors[bestBuyProduct.siteName] || { bg: 'bg-gray-500', icon: '?' };
+                const buyIcon = document.getElementById('best-buy-site-icon');
+                buyIcon.className = `w-10 h-10 rounded-xl ${siteColor.bg} text-white flex items-center justify-center font-bold text-lg`;
+                buyIcon.textContent = siteColor.icon;
+            }
+
+            // Update best sell display
+            if (bestSellProduct) {
+                document.getElementById('best-sell-price-display').textContent = `${bestSellProduct.gbSellPrice.toFixed(2)} ₺`;
+                document.getElementById('best-sell-site-name').textContent = bestSellProduct.siteName;
+                document.getElementById('best-sell-server-name').textContent = `${bestSellProduct.server} Sunucusu`;
+                
+                const siteColor = siteColors[bestSellProduct.siteName] || { bg: 'bg-gray-500', icon: '?' };
+                const sellIcon = document.getElementById('best-sell-site-icon');
+                sellIcon.className = `w-10 h-10 rounded-xl ${siteColor.bg} text-white flex items-center justify-center font-bold text-lg`;
+                sellIcon.textContent = siteColor.icon;
+            } else {
+                document.getElementById('best-sell-price-display').textContent = 'Mevcut Değil';
+                document.getElementById('best-sell-site-name').textContent = 'Satış fiyatı bulunamadı';
+                document.getElementById('best-sell-server-name').textContent = 'Tüm siteler kontrol edildi';
+                document.getElementById('best-sell-site-icon').textContent = '−';
+            }
         }
 
         // Quick Server Selection Functions
