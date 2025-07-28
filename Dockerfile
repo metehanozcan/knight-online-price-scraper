@@ -1,6 +1,6 @@
 FROM node:20-bullseye-slim
 
-# Chromium ve gerekli bağımlılıklar
+# Chromium ve bağımlılıkları kur
 RUN apt-get update && apt-get install -y \
     chromium \
     ca-certificates \
@@ -24,16 +24,20 @@ RUN apt-get update && apt-get install -y \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# PM2
+# PM2'yi yükle
 RUN npm install -g pm2
 
 WORKDIR /app
+
+# Puppeteer'ın Chromium indirmesini engelle
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
 COPY package*.json ./
 RUN npm install
 
 COPY . .
 
-# Puppeteer Chromium yolunu belirtiyoruz
+# Puppeteer Chromium yolunu Railway'deki sistem Chromium'u gösterecek şekilde ayarla
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV NODE_ENV=production
 ENV PORT=3000
