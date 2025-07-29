@@ -5,7 +5,6 @@
     "start": "node server.js",
     "worker": "node worker.js",
     "dev": "nodemon server.js",
-    "build:css": "tailwindcss -i ./src/input.css -o ./public/tailwind.css --minify",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -21,9 +20,6 @@
     "ioredis": "^5.3.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1",
-    "tailwindcss": "^3.4.1",
-    "postcss": "^8.4.38",
-    "autoprefixer": "^10.4.16"
+    "nodemon": "^3.0.1"
   }
 }
