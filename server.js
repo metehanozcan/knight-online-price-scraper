@@ -2,8 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const cron = require('node-cron');
 const path = require('path');
+const { scrapeQueue } = require('./queues/scrapeQueue');
 require('dotenv').config();
 
 const scrapingService = require('./services/scrapingService');
@@ -72,17 +72,13 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Schedule automatic price updates
+// Schedule automatic price updates using BullMQ
 const updateInterval = process.env.UPDATE_INTERVAL || 10;
-cron.schedule(`*/${updateInterval} * * * *`, async () => {
-    console.log(`Running scheduled price update (every ${updateInterval} minutes)...`);
-    try {
-        await scrapingService.updateAllPrices();
-        console.log('Scheduled price update completed');
-    } catch (error) {
-        console.error('Scheduled price update failed:', error.message);
-    }
-});
+scrapeQueue.add(
+    'scheduled-scrape',
+    {},
+    { repeat: { every: updateInterval * 60 * 1000 }, jobId: 'scheduled-scrape' }
+);
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
@@ -102,9 +98,9 @@ app.listen(PORT, () => {
     console.log(`🔄 Auto-update: every ${updateInterval} minutes`);
     console.log(`📈 API: http://localhost:${PORT}/api`);
     
-    // Initial price fetch
+    // Initial price fetch using queue
     setTimeout(() => {
-        scrapingService.updateAllPrices().catch(console.error);
+        scrapeQueue.add('initial-scrape');
     }, 5000);
 });
 
