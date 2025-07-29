@@ -4,14 +4,11 @@ This service scrapes various Knight Online market sites and exposes the data via
 
 ## Development
 
-Run the scraper locally using Docker Compose. This starts both the API server and the background worker:
+Run the scraper locally using Docker Compose:
 
 ```bash
 docker-compose up
 ```
-
-This will run two containers: `ko-scraper` for the Express API and `worker` which
-processes scraping jobs and stores the results in Redis.
 
 The application listens on port `3000` and uses a Redis instance for caching. The provided `.env` file contains defaults for local development.
 
