@@ -822,43 +822,48 @@ async scrapeBynogame() {
         this.isUpdating = true;
         console.log('🚀 Tüm sitelerden fiyat güncelleme başlatılıyor...');
 
+        const currentData = { ...this.priceData };
+
         try {
-            // Daha agresif retry ile
             const scrapers = [
                 () => this.scrapeWithRetry(() => this.scrapeBynogame(), 'ByNoGame', 3),
-                () => this.scrapeWithRetry(() => this.scrapeOyunfor(), 'OyunFor', 3), 
+                () => this.scrapeWithRetry(() => this.scrapeOyunfor(), 'OyunFor', 3),
                 () => this.scrapeWithRetry(() => this.scrapeKopazar(), 'Kopazar', 3),
                 () => this.scrapeWithRetry(() => this.scrapeYesilyurtgame(), 'Yeşilyurt Game', 3),
                 () => this.scrapeWithRetry(() => this.scrapeKlasgame(), 'KlasGame', 3)
             ];
 
             const results = await Promise.allSettled(scrapers.map(scraper => scraper()));
-            this.priceData = {};
-            
+            const newData = { ...currentData };
+
             let successCount = 0;
             let errorCount = 0;
-            
-            results.forEach((result, index) => {
+
+            results.forEach((result) => {
                 if (result.status === 'fulfilled') {
                     const data = result.value;
-                    this.priceData[data.site] = data;
-                    
+
                     if (data.status === 'success') {
                         successCount++;
+                        newData[data.site] = data;
                         console.log(`✅ ${data.name}: ${data.products.length} ürün başarıyla alındı`);
                     } else {
                         errorCount++;
+                        if (!newData[data.site]) {
+                            newData[data.site] = data;
+                        }
                         console.log(`❌ ${data.name}: Hata - ${data.error}`);
                     }
                 } else {
                     errorCount++;
-                    console.error(`💥 Scraper ${index} tamamen başarısız:`, result.reason?.message);
+                    console.error('💥 Scraper tamamen başarısız:', result.reason?.message);
                 }
             });
 
+            this.priceData = newData;
             this.lastUpdate = new Date().toISOString();
             console.log(`🎯 Fiyat güncelleme tamamlandı - Başarılı: ${successCount}, Hatalı: ${errorCount}`);
-            
+
             return this.priceData;
         } catch (error) {
             console.error('💥 Fiyat güncelleme hatası:', error);
