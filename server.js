@@ -13,6 +13,8 @@ const scrapingService = require('./services/scrapingService');
 const priceController = require('./controllers/priceController');
 
 const app = express();
+// Trust reverse proxies so rate-limiter can parse X-Forwarded-For correctly
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
 
 (async () => {
