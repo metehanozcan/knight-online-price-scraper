@@ -99,7 +99,7 @@ app.use((err, req, res, next) => {
 
 // Frontend sadece cache'ten veri servis eder
 // Worker işlemleri ayrı bir süreçte çalışır
-console.log('🖥️ Frontend server - sadece cache'ten veri servis ediyor');
+console.log('🖥️ Frontend server - sadece cache\'ten veri servis ediyor');
 console.log('⚙️ Worker işlemleri ayrı süreçte çalışmalı: node worker.js');
 
 // Graceful shutdown - sadece Redis bağlantısını kapat
