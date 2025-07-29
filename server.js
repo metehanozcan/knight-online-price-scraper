@@ -13,17 +13,22 @@ const scrapingService = require('./services/scrapingService');
 const priceController = require('./controllers/priceController');
 
 const app = express();
-// Trust reverse proxies so rate-limiter can parse X-Forwarded-For correctly
 app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
 
+// Başlangıçta cache'den veri yükle
 (async () => {
     try {
         const cached = await cacheService.getPriceData();
-        scrapingService.priceData = cached.data;
-        scrapingService.lastUpdate = cached.lastUpdate;
+        if (cached.data && Object.keys(cached.data).length > 0) {
+            scrapingService.priceData = cached.data;
+            scrapingService.lastUpdate = cached.lastUpdate;
+            console.log(`✅ Başlangıçta ${Object.keys(cached.data).length} site verisi cache'den yüklendi`);
+        } else {
+            console.log('⚠️ Cache boş, ilk scraping bekleniyor...');
+        }
     } catch (err) {
-        console.error('Failed to load cached prices:', err.message);
+        console.error('❌ Başlangıç cache yükleme hatası:', err.message);
     }
 })();
 
@@ -35,7 +40,8 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
             scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            imgSrc: ["'self'", "data:", "https:"]
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"] // API çağrıları için
         }
     }
 }));
@@ -44,19 +50,23 @@ app.use(helmet({
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
         ? ['https://yourdomain.com'] 
-        : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+        : true, // Development'ta tüm origin'lere izin ver
     credentials: true
 }));
 
-// Rate limiting
+// Rate limiting - daha yüksek limit
 const limiter = rateLimit({
-    windowMs: (process.env.RATE_LIMIT_WINDOW || 15) * 60 * 1000,
-    max: process.env.RATE_LIMIT_MAX || 100,
+    windowMs: 1 * 60 * 1000, // 1 dakika
+    max: 100, // 100 istek
     message: {
         error: 'Too many requests, please try again later.'
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    skip: (req) => {
+        // Static dosyalar için rate limit yok
+        return req.path.startsWith('/static') || req.path.endsWith('.js') || req.path.endsWith('.css');
+    }
 });
 app.use('/api', limiter);
 
@@ -87,24 +97,65 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Schedule automatic price updates using BullMQ
-const updateInterval = process.env.UPDATE_INTERVAL || 10;
+// Schedule automatic price updates
+const updateInterval = parseInt(process.env.UPDATE_INTERVAL) || 10;
+
+// İlk scraping'i 30 saniye sonra yap
+setTimeout(async () => {
+    try {
+        const cached = await cacheService.getPriceData();
+        // Eğer cache boşsa veya 1 saatten eskiyse
+        const oneHourAgo = Date.now() - (60 * 60 * 1000);
+        const lastUpdateTime = cached.lastUpdate ? new Date(cached.lastUpdate).getTime() : 0;
+        
+        if (!cached.data || Object.keys(cached.data).length === 0 || lastUpdateTime < oneHourAgo) {
+            console.log('📊 İlk scraping başlatılıyor...');
+            await scrapeQueue.add('initial-scrape', {}, {
+                removeOnComplete: true,
+                removeOnFail: false
+            });
+        } else {
+            console.log('✅ Cache güncel, ilk scraping atlanıyor');
+        }
+    } catch (error) {
+        console.error('❌ İlk scraping hatası:', error);
+    }
+}, 30000);
+
+// Periyodik güncelleme
 scrapeQueue.add(
     'scheduled-scrape',
     {},
-    { repeat: { every: updateInterval * 60 * 1000 }, jobId: 'scheduled-scrape' }
+    { 
+        repeat: { 
+            every: updateInterval * 60 * 1000 
+        }, 
+        jobId: 'scheduled-scrape',
+        removeOnComplete: true,
+        removeOnFail: false
+    }
 );
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received, shutting down gracefully');
-    process.exit(0);
-});
+const gracefulShutdown = async () => {
+    console.log('🛑 Kapatma sinyali alındı, temiz kapatma yapılıyor...');
+    
+    try {
+        // Queue'yu durdur
+        await scrapeQueue.close();
+        // Redis bağlantısını kapat
+        await cacheService.redis.quit();
+        
+        console.log('✅ Temiz kapatma tamamlandı');
+        process.exit(0);
+    } catch (error) {
+        console.error('❌ Kapatma hatası:', error);
+        process.exit(1);
+    }
+};
 
-process.on('SIGINT', () => {
-    console.log('SIGINT received, shutting down gracefully');
-    process.exit(0);
-});
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 app.listen(PORT, () => {
     console.log('🚀 Knight Online GB Price Scraper');
@@ -112,11 +163,7 @@ app.listen(PORT, () => {
     console.log(`🌐 Frontend: http://localhost:${PORT}`);
     console.log(`🔄 Auto-update: every ${updateInterval} minutes`);
     console.log(`📈 API: http://localhost:${PORT}/api`);
-    
-    // Initial price fetch using queue
-    setTimeout(() => {
-        scrapeQueue.add('initial-scrape');
-    }, 5000);
+    console.log(`💾 Cache: ${process.env.REDIS_URL ? 'Remote Redis' : 'Local Redis'}`);
 });
 
 module.exports = app;

@@ -5,20 +5,11 @@ class ScrapingService {
         this.priceData = {};
         this.lastUpdate = null;
         this.isUpdating = false;
-        this.browserInstance = null;
     }
 
+    // Her scraper için ayrı browser instance oluştur
     async createBrowser() {
-        if (this.browserInstance) {
-            try {
-                await this.browserInstance.version();
-                return this.browserInstance;
-            } catch (error) {
-                this.browserInstance = null;
-            }
-        }
-
-        this.browserInstance = await puppeteer.launch({
+        return await puppeteer.launch({
             headless: 'new',
             args: [
                 '--no-sandbox',
@@ -28,17 +19,15 @@ class ScrapingService {
                 '--no-first-run',
                 '--no-zygote',
                 '--disable-gpu',
-                '--memory-pressure-off'
+                '--memory-pressure-off',
+                '--single-process' // Tek process için
             ],
             timeout: 60000,
             protocolTimeout: 60000
         });
-
-        return this.browserInstance;
     }
 
-    async createOptimizedPage() {
-        const browser = await this.createBrowser();
+    async createOptimizedPage(browser) {
         const page = await browser.newPage();
         
         await page.setDefaultNavigationTimeout(30000);
@@ -47,24 +36,10 @@ class ScrapingService {
         
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
         
-        await page.setRequestInterception(true);
-        page.on('request', (req) => {
-            const resourceType = req.resourceType();
-            if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
-                req.abort();
-            } else {
-                req.continue();
-            }
-        });
-
+        // Request interception kapalı - performans için
+        // await page.setRequestInterception(true);
+        
         return page;
-    }
-
-    async closeBrowser() {
-        if (this.browserInstance) {
-            await this.browserInstance.close();
-            this.browserInstance = null;
-        }
     }
 
     async scrapeWithRetry(scrapeFunction, siteName, maxRetries = 2) {
@@ -74,7 +49,7 @@ class ScrapingService {
                 const result = await Promise.race([
                     scrapeFunction(),
                     new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Timeout')), 30000)
+                        setTimeout(() => reject(new Error('Timeout')), 45000)
                     )
                 ]);
                 
@@ -99,10 +74,12 @@ class ScrapingService {
         }
     }
 
+    // Her scraper kendi browser'ını oluştursun
     async scrapeBynogame() {
-        let page;
+        let browser, page;
         try {
-            page = await this.createOptimizedPage();
+            browser = await this.createBrowser();
+            page = await this.createOptimizedPage(browser);
             
             await page.goto('https://www.bynogame.com/tr/oyunlar/knight-online/gold-bar', {
                 waitUntil: 'domcontentloaded',
@@ -128,7 +105,7 @@ class ScrapingService {
                                 const serverMatch = name.match(/(Zero|Felis|Pandora|Agartha|Dryads|Destan|Minark|Oreads)/i);
                                 if (serverMatch) {
                                     products.push({
-                                        server: serverMatch[1],
+                                        server: serverMatch[1].toUpperCase(),
                                         buyPrice: parseFloat((price / 100).toFixed(2)),
                                         sellPrice: null,
                                         unit: '1GB',
@@ -163,13 +140,15 @@ class ScrapingService {
             };
         } finally {
             if (page) await page.close();
+            if (browser) await browser.close();
         }
     }
 
     async scrapeOyunfor() {
-        let page;
+        let browser, page;
         try {
-            page = await this.createOptimizedPage();
+            browser = await this.createBrowser();
+            page = await this.createOptimizedPage(browser);
             
             await page.goto('https://www.oyunfor.com/knight-online/gb-gold-bar', {
                 waitUntil: 'domcontentloaded',
@@ -198,7 +177,7 @@ class ScrapingService {
                                 
                                 if (serverMatch && price) {
                                     products.push({
-                                        server: serverMatch[1],
+                                        server: serverMatch[1].toUpperCase(),
                                         buyPrice: price / 10,
                                         sellPrice: null,
                                         unit: '1M',
@@ -233,13 +212,15 @@ class ScrapingService {
             };
         } finally {
             if (page) await page.close();
+            if (browser) await browser.close();
         }
     }
 
     async scrapeKopazar() {
-        let page;
+        let browser, page;
         try {
-            page = await this.createOptimizedPage();
+            browser = await this.createBrowser();
+            page = await this.createOptimizedPage(browser);
             
             await page.goto('https://www.kopazar.com/knight-online-gold-bar', {
                 waitUntil: 'domcontentloaded',
@@ -276,7 +257,7 @@ class ScrapingService {
                                 
                                 if (buyPrice) {
                                     products.push({
-                                        server: serverMatch[1],
+                                        server: serverMatch[1].toUpperCase(),
                                         buyPrice: buyPrice / 10,
                                         sellPrice: null,
                                         unit: '1M',
@@ -311,104 +292,119 @@ class ScrapingService {
             };
         } finally {
             if (page) await page.close();
+            if (browser) await browser.close();
         }
     }
 
-  async scrapeYesilyurtgame() {
-    let page;
-    try {
-        page = await this.createOptimizedPage();
-        
-        await page.goto('https://www.yesilyurtgame.com/oyun-parasi/knight-online-goldbar-gb', {
-            waitUntil: 'domcontentloaded',
-            timeout: 20000
-        });
-
-        await page.waitForTimeout(2000);
-
-        const data = await page.evaluate(() => {
-            const products = [];
-            const sections = document.querySelectorAll('section');
+    async scrapeYesilyurtgame() {
+        let browser, page;
+        try {
+            browser = await this.createBrowser();
+            page = await this.createOptimizedPage(browser);
             
-            const serverNames = ['Sirius', 'Vega', 'Destan', 'Ares', 'Diez', 'Gordion', 'Olympia', 'Pathos', 'Rosetta'];
-            
-            sections.forEach((section) => {
-                try {
-                    const sectionText = section.innerText || section.textContent || '';
-                    
-                    // Server adını bul
-                    let serverName = null;
-                    for (const server of serverNames) {
-                        if (sectionText.includes(server)) {
-                            serverName = server;
-                            break;
-                        }
-                    }
-                    
-                    if (!serverName) return;
-                    
-                    // GB Alış Fiyatı (bizim satış fiyatımız)
-                    const buyMatch = sectionText.match(/GB Alış Fiyatı\s*:\s*(\d+(?:[.,]\d+)?)/);
-                    // Satış Fiyatı (bizim alış fiyatımız)
-                    const sellMatch = sectionText.match(/Satış Fiyatı\s*:\s*(\d+(?:[.,]\d+)?)/);
-                    
-                    let buyPrice = null;
-                    let sellPrice = null;
-                    
-                    if (buyMatch) {
-                        buyPrice = parseFloat(buyMatch[1].replace(',', '.'));
-                    }
-                    
-                    if (sellMatch) {
-                        sellPrice = parseFloat(sellMatch[1].replace(',', '.'));
-                    }
-                    
-                    // Python kodunda 10 ile çarpılıyor, bu 10M biriminde olduğunu gösteriyor
-                    // Biz 1M cinsinden istiyoruz, o yüzden 10'a bölüyoruz
-                    if (sellPrice) {
-                        products.push({
-                            server: serverName,
-                            buyPrice: parseFloat((sellPrice / 10).toFixed(2)), // Satış fiyatı bizim alış fiyatımız
-                            sellPrice: buyPrice ? parseFloat((buyPrice / 10).toFixed(2)) : null, // GB Alış fiyatı bizim satış fiyatımız
-                            unit: '1M',
-                            originalName: `Knight Online ${serverName} GB`
-                        });
-                    }
-                    
-                } catch (error) {
-                    console.error(`YYG Section error:`, error);
-                }
+            await page.goto('https://www.yesilyurtgame.com/oyun-parasi/knight-online-goldbar-gb', {
+                waitUntil: 'domcontentloaded',
+                timeout: 20000
             });
-            
-            // İlk 9 ürünü al (Python kodundaki gibi)
-            return products.slice(0, 9);
-        });
 
-        return {
-            site: 'yesilyurtgame',
-            name: 'Yeşilyurt Game',
-            products: data,
-            status: 'success',
-            timestamp: new Date().toISOString()
-        };
-    } catch (error) {
-        return {
-            site: 'yesilyurtgame',
-            name: 'Yeşilyurt Game',
-            products: [],
-            status: 'error',
-            error: error.message,
-            timestamp: new Date().toISOString()
-        };
-    } finally {
-        if (page) await page.close();
+            await page.waitForTimeout(2000);
+
+            const data = await page.evaluate(() => {
+                const products = [];
+                const sections = document.querySelectorAll('section');
+                
+                // Server mapping
+                const serverMapping = {
+                    'Sirius': 'ZERO',
+                    'Vega': 'FELIS', 
+                    'Destan': 'DESTAN',
+                    'Ares': 'PANDORA',
+                    'Diez': 'AGARTHA',
+                    'Gordion': 'DRYADS',
+                    'Olympia': 'OREADS',
+                    'Pathos': 'MINARK',
+                    'Rosetta': 'ZERO' // Varsayılan
+                };
+                
+                sections.forEach((section) => {
+                    try {
+                        const sectionText = section.innerText || section.textContent || '';
+                        
+                        // Server adını bul
+                        let serverName = null;
+                        let mappedServer = null;
+                        
+                        for (const [yyName, koName] of Object.entries(serverMapping)) {
+                            if (sectionText.includes(yyName)) {
+                                serverName = yyName;
+                                mappedServer = koName;
+                                break;
+                            }
+                        }
+                        
+                        if (!serverName || !mappedServer) return;
+                        
+                        // GB Alış Fiyatı (bizim satış fiyatımız)
+                        const buyMatch = sectionText.match(/GB Alış Fiyatı\s*:\s*(\d+(?:[.,]\d+)?)/);
+                        // Satış Fiyatı (bizim alış fiyatımız)
+                        const sellMatch = sectionText.match(/Satış Fiyatı\s*:\s*(\d+(?:[.,]\d+)?)/);
+                        
+                        let buyPrice = null;
+                        let sellPrice = null;
+                        
+                        if (buyMatch) {
+                            buyPrice = parseFloat(buyMatch[1].replace(',', '.'));
+                        }
+                        
+                        if (sellMatch) {
+                            sellPrice = parseFloat(sellMatch[1].replace(',', '.'));
+                        }
+                        
+                        if (sellPrice) {
+                            products.push({
+                                server: mappedServer,
+                                buyPrice: parseFloat((sellPrice / 10).toFixed(2)),
+                                sellPrice: buyPrice ? parseFloat((buyPrice / 10).toFixed(2)) : null,
+                                unit: '1M',
+                                originalName: `Knight Online ${serverName} GB`
+                            });
+                        }
+                        
+                    } catch (error) {
+                        console.error(`YYG Section error:`, error);
+                    }
+                });
+                
+                return products.slice(0, 9);
+            });
+
+            return {
+                site: 'yesilyurtgame',
+                name: 'Yeşilyurt Game',
+                products: data,
+                status: 'success',
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            return {
+                site: 'yesilyurtgame',
+                name: 'Yeşilyurt Game',
+                products: [],
+                status: 'error',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        } finally {
+            if (page) await page.close();
+            if (browser) await browser.close();
+        }
     }
-}
 
     async scrapeKlasgame() {
-        let page;
+        let browser, page;
         try {
-            page = await this.createOptimizedPage();
+            browser = await this.createBrowser();
+            page = await this.createOptimizedPage(browser);
             
             await page.goto('https://www.klasgame.com/knightonline/knight-online-gb-goldbar-premium-cash', {
                 waitUntil: 'domcontentloaded',
@@ -441,10 +437,12 @@ class ScrapingService {
                                     unitMultiplier = 10;
                                 }
                                 
-                                const knownServers = ['Zero', 'Pandora', 'Agartha', 'Felis', 'Dryads', 'Destan', 'Minark', 'Oreads'];
-                                if (knownServers.includes(serverName)) {
+                                const knownServers = ['ZERO', 'PANDORA', 'AGARTHA', 'FELIS', 'DRYADS', 'DESTAN', 'MINARK', 'OREADS'];
+                                const upperServer = serverName.toUpperCase();
+                                
+                                if (knownServers.includes(upperServer)) {
                                     products.push({
-                                        server: serverName,
+                                        server: upperServer,
                                         buyPrice: price / unitMultiplier,
                                         sellPrice: null,
                                         unit: '1M',
@@ -479,10 +477,11 @@ class ScrapingService {
             };
         } finally {
             if (page) await page.close();
+            if (browser) await browser.close();
         }
     }
 
-    // PARALEL ÇALIŞAN YENİ VERSİYON
+    // GERÇEK PARALEL ÇALIŞTIRMA
     async updateAllPrices() {
         if (this.isUpdating) {
             console.log('⚠️ Güncelleme zaten devam ediyor...');
@@ -490,10 +489,11 @@ class ScrapingService {
         }
 
         this.isUpdating = true;
-        console.log('🚀 Paralel fiyat güncelleme başlatılıyor...');
+        const startTime = Date.now();
+        console.log('🚀 Gerçek paralel fiyat güncelleme başlatılıyor...');
 
         try {
-            // TÜM SCRAPER'LARI PARALEL ÇALIŞTIR
+            // TÜM SCRAPER'LAR AYNI ANDA BAŞLAR
             const scraperPromises = [
                 this.scrapeWithRetry(() => this.scrapeBynogame(), 'ByNoGame'),
                 this.scrapeWithRetry(() => this.scrapeOyunfor(), 'OyunFor'),
@@ -502,11 +502,13 @@ class ScrapingService {
                 this.scrapeWithRetry(() => this.scrapeKlasgame(), 'KlasGame')
             ];
 
+            // Hepsi bitene kadar bekle
             const results = await Promise.allSettled(scraperPromises);
             const newData = {};
 
             let successCount = 0;
             let errorCount = 0;
+            let totalProducts = 0;
 
             results.forEach((result) => {
                 if (result.status === 'fulfilled') {
@@ -515,17 +517,25 @@ class ScrapingService {
                     
                     if (data.status === 'success') {
                         successCount++;
+                        totalProducts += data.products.length;
                         console.log(`✅ ${data.name}: ${data.products.length} ürün`);
                     } else {
                         errorCount++;
-                        console.log(`❌ ${data.name}: Hata`);
+                        console.log(`❌ ${data.name}: ${data.error}`);
                     }
+                } else {
+                    errorCount++;
+                    console.log(`❌ Bilinmeyen hata:`, result.reason);
                 }
             });
 
             this.priceData = newData;
             this.lastUpdate = new Date().toISOString();
-            console.log(`🎯 Paralel güncelleme tamamlandı - Başarılı: ${successCount}, Hatalı: ${errorCount}`);
+            
+            const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+            console.log(`🎯 Paralel güncelleme tamamlandı`);
+            console.log(`⏱️ Süre: ${duration}s`);
+            console.log(`📊 Başarılı: ${successCount}, Hatalı: ${errorCount}, Toplam ürün: ${totalProducts}`);
 
             return this.priceData;
         } catch (error) {
@@ -533,7 +543,6 @@ class ScrapingService {
             throw error;
         } finally {
             this.isUpdating = false;
-            await this.closeBrowser();
         }
     }
 
@@ -546,7 +555,7 @@ class ScrapingService {
     }
 
     getBestPrices(priceData = this.priceData) {
-        const servers = ['Zero', 'Felis', 'Pandora', 'Agartha', 'Dryads', 'Destan', 'Minark', 'Oreads'];
+        const servers = ['ZERO', 'FELIS', 'PANDORA', 'AGARTHA', 'DRYADS', 'DESTAN', 'MINARK', 'OREADS'];
         const bestPrices = {};
 
         servers.forEach(server => {
@@ -555,7 +564,7 @@ class ScrapingService {
             Object.values(priceData).forEach(siteData => {
                 if (siteData.status === 'success') {
                     const product = siteData.products.find(p => 
-                        p.server.toLowerCase() === server.toLowerCase()
+                        p.server.toUpperCase() === server.toUpperCase()
                     );
                     if (product && product.buyPrice) {
                         serverPrices.push({

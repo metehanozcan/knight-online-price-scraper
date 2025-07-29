@@ -5,16 +5,20 @@ const { scrapeQueue } = require('../queues/scrapeQueue');
 
 const router = express.Router();
 
-// Get all price data
+// SADECE CACHE'DEN VERİ AL - SCRAPING TETİKLEME
 router.get('/prices', async (req, res) => {
     try {
+        // Sadece cache'den al
         const data = await cacheService.getPriceData();
+        
+        // Cache boşsa bile boş data döndür, scraping tetikleme
         res.json({
             success: true,
-            data: data.data,
+            data: data.data || {},
             lastUpdate: data.lastUpdate,
-            isUpdating: data.isUpdating,
-            timestamp: new Date().toISOString()
+            isUpdating: data.isUpdating || false,
+            timestamp: new Date().toISOString(),
+            source: 'cache'
         });
     } catch (error) {
         console.error('Error fetching prices:', error);
@@ -26,15 +30,17 @@ router.get('/prices', async (req, res) => {
     }
 });
 
-// Get best prices by server
+// Get best prices by server - SADECE CACHE'DEN
 router.get('/prices/best', async (req, res) => {
     try {
         const data = await cacheService.getPriceData();
-        const bestPrices = scrapingService.getBestPrices(data.data);
+        const bestPrices = scrapingService.getBestPrices(data.data || {});
+        
         res.json({
             success: true,
             data: bestPrices,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            source: 'cache'
         });
     } catch (error) {
         console.error('Error fetching best prices:', error);
@@ -46,11 +52,27 @@ router.get('/prices/best', async (req, res) => {
     }
 });
 
-// Force price update
+// MANUEL GÜNCELLEME - SADECE BU ENDPOINT SCRAPING TETİKLER
 router.post('/prices/update', async (req, res) => {
     try {
         console.log('Manual price update requested');
-        await scrapeQueue.add('manual-scrape');
+        
+        // Zaten güncelleme varsa reddet
+        const currentData = await cacheService.getPriceData();
+        if (currentData.isUpdating) {
+            return res.status(429).json({
+                success: false,
+                error: 'Update already in progress',
+                message: 'Güncelleme zaten devam ediyor'
+            });
+        }
+        
+        // Queue'ya ekle
+        await scrapeQueue.add('manual-scrape', {}, {
+            removeOnComplete: true,
+            removeOnFail: false
+        });
+        
         res.json({
             success: true,
             message: 'Price update queued',
@@ -66,23 +88,24 @@ router.post('/prices/update', async (req, res) => {
     }
 });
 
-// Get specific site prices
+// Get specific site prices - SADECE CACHE
 router.get('/prices/:site', async (req, res) => {
     try {
         const { site } = req.params;
         const data = await cacheService.getPriceData();
         
-        if (data.data[site]) {
+        if (data.data && data.data[site]) {
             res.json({
                 success: true,
                 data: data.data[site],
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                source: 'cache'
             });
         } else {
             res.status(404).json({ 
                 success: false,
                 error: 'Site not found',
-                availableSites: Object.keys(data.data)
+                availableSites: Object.keys(data.data || {})
             });
         }
     } catch (error) {
@@ -95,10 +118,31 @@ router.get('/prices/:site', async (req, res) => {
     }
 });
 
-// Get price statistics
+// Get price statistics - SADECE CACHE
 router.get('/prices/stats/summary', async (req, res) => {
     try {
         const data = await cacheService.getPriceData();
+        
+        if (!data.data || Object.keys(data.data).length === 0) {
+            return res.json({
+                success: true,
+                stats: {
+                    totalSites: 0,
+                    activeSites: 0,
+                    totalPrices: 0,
+                    avgPrice: 0,
+                    minPrice: 0,
+                    maxPrice: 0,
+                    priceRange: 0,
+                    lastUpdate: data.lastUpdate,
+                    isUpdating: data.isUpdating || false
+                },
+                bestPrices: {},
+                timestamp: new Date().toISOString(),
+                source: 'cache'
+            });
+        }
+        
         const bestPrices = scrapingService.getBestPrices(data.data);
         
         // Calculate overall statistics
@@ -107,7 +151,7 @@ router.get('/prices/stats/summary', async (req, res) => {
             if (siteData.status === 'success') {
                 siteData.products.forEach(product => {
                     if (product.buyPrice) {
-                        allPrices.push(product.buyPrice * 100); // Convert to GB price
+                        allPrices.push(product.buyPrice * 100);
                     }
                 });
             }
@@ -122,14 +166,15 @@ router.get('/prices/stats/summary', async (req, res) => {
             maxPrice: allPrices.length > 0 ? Math.max(...allPrices) : 0,
             priceRange: allPrices.length > 0 ? Math.max(...allPrices) - Math.min(...allPrices) : 0,
             lastUpdate: data.lastUpdate,
-            isUpdating: data.isUpdating
+            isUpdating: data.isUpdating || false
         };
         
         res.json({
             success: true,
             stats,
             bestPrices,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            source: 'cache'
         });
     } catch (error) {
         console.error('Error fetching price statistics:', error);
@@ -143,26 +188,37 @@ router.get('/prices/stats/summary', async (req, res) => {
 
 // Health check
 router.get('/health', async (req, res) => {
-    const data = await cacheService.getPriceData();
-    const sitesStatus = {};
-    
-    Object.entries(data.data).forEach(([site, siteData]) => {
-        sitesStatus[site] = {
-            status: siteData.status,
-            lastUpdate: siteData.timestamp,
-            productCount: siteData.products ? siteData.products.length : 0
-        };
-    });
-    
-    res.json({
-        status: 'ok',
-        uptime: process.uptime(),
-        lastUpdate: data.lastUpdate,
-        isUpdating: data.isUpdating,
-        sitesStatus,
-        memory: process.memoryUsage(),
-        timestamp: new Date().toISOString()
-    });
+    try {
+        const data = await cacheService.getPriceData();
+        const sitesStatus = {};
+        
+        if (data.data) {
+            Object.entries(data.data).forEach(([site, siteData]) => {
+                sitesStatus[site] = {
+                    status: siteData.status,
+                    lastUpdate: siteData.timestamp,
+                    productCount: siteData.products ? siteData.products.length : 0
+                };
+            });
+        }
+        
+        res.json({
+            status: 'ok',
+            uptime: process.uptime(),
+            lastUpdate: data.lastUpdate,
+            isUpdating: data.isUpdating || false,
+            sitesStatus,
+            cacheStatus: 'active',
+            memory: process.memoryUsage(),
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
 });
 
 module.exports = router;
