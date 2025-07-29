@@ -1,12 +1,14 @@
 const express = require('express');
 const scrapingService = require('../services/scrapingService');
+const cacheService = require('../services/cacheService');
+const { scrapeQueue } = require('../queues/scrapeQueue');
 
 const router = express.Router();
 
 // Get all price data
 router.get('/prices', async (req, res) => {
     try {
-        const data = scrapingService.getPriceData();
+        const data = await cacheService.getPriceData();
         res.json({
             success: true,
             data: data.data,
@@ -16,10 +18,10 @@ router.get('/prices', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching prices:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
             error: 'Failed to fetch prices',
-            message: error.message 
+            message: error.message
         });
     }
 });
@@ -27,7 +29,8 @@ router.get('/prices', async (req, res) => {
 // Get best prices by server
 router.get('/prices/best', async (req, res) => {
     try {
-        const bestPrices = scrapingService.getBestPrices();
+        const data = await cacheService.getPriceData();
+        const bestPrices = scrapingService.getBestPrices(data.data);
         res.json({
             success: true,
             data: bestPrices,
@@ -47,19 +50,18 @@ router.get('/prices/best', async (req, res) => {
 router.post('/prices/update', async (req, res) => {
     try {
         console.log('Manual price update requested');
-        const data = await scrapingService.updateAllPrices();
-        res.json({ 
+        await scrapeQueue.add('manual-scrape');
+        res.json({
             success: true,
-            message: 'Prices updated successfully',
-            data,
+            message: 'Price update queued',
             timestamp: new Date().toISOString()
         });
     } catch (error) {
         console.error('Error updating prices:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
             error: 'Failed to update prices',
-            message: error.message 
+            message: error.message
         });
     }
 });
@@ -68,7 +70,7 @@ router.post('/prices/update', async (req, res) => {
 router.get('/prices/:site', async (req, res) => {
     try {
         const { site } = req.params;
-        const data = scrapingService.getPriceData();
+        const data = await cacheService.getPriceData();
         
         if (data.data[site]) {
             res.json({
@@ -96,8 +98,8 @@ router.get('/prices/:site', async (req, res) => {
 // Get price statistics
 router.get('/prices/stats/summary', async (req, res) => {
     try {
-        const data = scrapingService.getPriceData();
-        const bestPrices = scrapingService.getBestPrices();
+        const data = await cacheService.getPriceData();
+        const bestPrices = scrapingService.getBestPrices(data.data);
         
         // Calculate overall statistics
         const allPrices = [];
@@ -140,8 +142,8 @@ router.get('/prices/stats/summary', async (req, res) => {
 });
 
 // Health check
-router.get('/health', (req, res) => {
-    const data = scrapingService.getPriceData();
+router.get('/health', async (req, res) => {
+    const data = await cacheService.getPriceData();
     const sitesStatus = {};
     
     Object.entries(data.data).forEach(([site, siteData]) => {

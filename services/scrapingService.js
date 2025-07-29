@@ -877,14 +877,14 @@ async scrapeBynogame() {
     };
 }
 
-getBestPrices() {
+getBestPrices(priceData = this.priceData) {
     const servers = ['Zero', 'Felis', 'Pandora', 'Agartha', 'Dryads', 'Destan', 'Minark', 'Oreads'];
     const bestPrices = {};
 
     servers.forEach(server => {
         const serverPrices = [];
         
-        Object.values(this.priceData).forEach(siteData => {
+        Object.values(priceData).forEach(siteData => {
             if (siteData.status === 'success') {
                 const product = siteData.products.find(p => 
                     p.server.toLowerCase() === server.toLowerCase()
