@@ -5,6 +5,8 @@
     "start": "node server.js",
     "worker": "node worker.js",
     "dev": "nodemon server.js",
+    "build-css": "tailwindcss -i ./public/input.css -o ./public/styles.css",
+    "watch-css": "tailwindcss -i ./public/input.css -o ./public/styles.css --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
