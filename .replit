@@ -8,7 +8,7 @@ channel = "stable-25_05"
 run = ["sh", "-c", "npm run dev"]
 
 [workflows]
-runButton = "Frontend Only"
+runButton = "Frontend with CSS Build"
 
 [[workflows.workflow]]
 name = "Frontend Only"
@@ -27,6 +27,19 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node worker.js"
+
+[[workflows.workflow]]
+name = "Frontend with CSS Build"
+author = 43432280
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run build-css-prod"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm start"
 
 [[ports]]
 localPort = 3000
