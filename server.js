@@ -1,9 +1,12 @@
+process.setMaxListeners(20);
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { scrapeQueue } = require('./queues/scrapeQueue');
+const cacheService = require('./services/cacheService');
 require('dotenv').config();
 
 const scrapingService = require('./services/scrapingService');
@@ -11,6 +14,16 @@ const priceController = require('./controllers/priceController');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+(async () => {
+    try {
+        const cached = await cacheService.getPriceData();
+        scrapingService.priceData = cached.data;
+        scrapingService.lastUpdate = cached.lastUpdate;
+    } catch (err) {
+        console.error('Failed to load cached prices:', err.message);
+    }
+})();
 
 // Security middleware
 app.use(helmet({
