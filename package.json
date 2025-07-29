@@ -3,13 +3,10 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "nodemon server.js",
-<<<<<<< HEAD
     "start": "node server.js",
     "build-css": "tailwindcss -i ./public/input.css -o ./public/output.css --watch",
     "build-css-prod": "tailwindcss -i ./public/input.css -o ./public/output.css --minify",
     "watch-css": "tailwindcss -i ./public/input.css -o ./public/styles.css --watch",
-=======
->>>>>>> parent of 9f699cd (setup local tailwind)
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -25,10 +22,6 @@
     "puppeteer": "^21.3.8"
   },
   "devDependencies": {
-<<<<<<< HEAD
     "nodemon": "^3.1.10"
-=======
-    "nodemon": "^3.0.1"
->>>>>>> parent of 9f699cd (setup local tailwind)
   }
 }
