@@ -2,10 +2,10 @@
   "name": "knight-online-price-scraper",
   "version": "1.0.0",
   "scripts": {
-    "start": "node server.js",
-    "worker": "node worker.js",
     "dev": "nodemon server.js",
-    "build-css": "tailwindcss -i ./public/input.css -o ./public/styles.css",
+    "start": "node server.js",
+    "build-css": "tailwindcss -i ./public/input.css -o ./public/output.css --watch",
+    "build-css-prod": "tailwindcss -i ./public/input.css -o ./public/output.css --minify",
     "watch-css": "tailwindcss -i ./public/input.css -o ./public/styles.css --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
