@@ -4,12 +4,23 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cron = require('node-cron');
 const path = require('path');
+const { createClient } = require('redis');
 require('dotenv').config();
 
 const scrapingService = require('./services/scrapingService');
 const priceController = require('./controllers/priceController');
 
+// Redis setup
+// Include ?family=0 in the URL so Node can resolve IPv4/IPv6 addresses (required on Railway)
+const redisClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379?family=0' });
+redisClient.on('error', err => console.error('Redis Client Error', err));
+redisClient.connect().then(() => console.log('Connected to Redis')).catch(console.error);
+scrapingService.setRedisClient(redisClient);
+scrapingService.loadCache().catch(console.error);
+
 const app = express();
+// Enable trust proxy to handle X-Forwarded-For correctly (required by express-rate-limit)
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // Security middleware

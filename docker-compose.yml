@@ -9,3 +9,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped

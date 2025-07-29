@@ -6,6 +6,35 @@ class ScrapingService {
         this.lastUpdate = null;
         this.isUpdating = false;
         this.browserInstance = null;
+        this.redis = null;
+    }
+
+    setRedisClient(client) {
+        this.redis = client;
+    }
+
+    async loadCache() {
+        if (!this.redis) return;
+        try {
+            const data = await this.redis.get('priceData');
+            const last = await this.redis.get('lastUpdate');
+            if (data) this.priceData = JSON.parse(data);
+            if (last) this.lastUpdate = last;
+        } catch (err) {
+            console.error('Redis load error:', err);
+        }
+    }
+
+    async saveCache() {
+        if (!this.redis) return;
+        try {
+            await this.redis.set('priceData', JSON.stringify(this.priceData), { EX: 600 });
+            if (this.lastUpdate) {
+                await this.redis.set('lastUpdate', this.lastUpdate, { EX: 600 });
+            }
+        } catch (err) {
+            console.error('Redis save error:', err);
+        }
     }
 
     async createBrowser() {
@@ -858,7 +887,9 @@ async scrapeBynogame() {
 
             this.lastUpdate = new Date().toISOString();
             console.log(`🎯 Fiyat güncelleme tamamlandı - Başarılı: ${successCount}, Hatalı: ${errorCount}`);
-            
+
+            await this.saveCache();
+
             return this.priceData;
         } catch (error) {
             console.error('💥 Fiyat güncelleme hatası:', error);
