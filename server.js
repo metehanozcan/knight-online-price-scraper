@@ -5,7 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-const { scrapeQueue } = require('./queues/scrapeQueue');
+// const { scrapeQueue } = require('./queues/scrapeQueue'); // Worker'da kullanılacak
 const cacheService = require('./services/cacheService');
 require('dotenv').config();
 
@@ -97,56 +97,20 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Schedule automatic price updates
-const updateInterval = parseInt(process.env.UPDATE_INTERVAL) || 10;
+// Frontend sadece cache'ten veri servis eder
+// Worker işlemleri ayrı bir süreçte çalışır
+console.log('🖥️ Frontend server - sadece cache'ten veri servis ediyor');
+console.log('⚙️ Worker işlemleri ayrı süreçte çalışmalı: node worker.js');
 
-// İlk scraping'i 30 saniye sonra yap
-setTimeout(async () => {
-    try {
-        const cached = await cacheService.getPriceData();
-        // Eğer cache boşsa veya 1 saatten eskiyse
-        const oneHourAgo = Date.now() - (60 * 60 * 1000);
-        const lastUpdateTime = cached.lastUpdate ? new Date(cached.lastUpdate).getTime() : 0;
-        
-        if (!cached.data || Object.keys(cached.data).length === 0 || lastUpdateTime < oneHourAgo) {
-            console.log('📊 İlk scraping başlatılıyor...');
-            await scrapeQueue.add('initial-scrape', {}, {
-                removeOnComplete: true,
-                removeOnFail: false
-            });
-        } else {
-            console.log('✅ Cache güncel, ilk scraping atlanıyor');
-        }
-    } catch (error) {
-        console.error('❌ İlk scraping hatası:', error);
-    }
-}, 30000);
-
-// Periyodik güncelleme
-scrapeQueue.add(
-    'scheduled-scrape',
-    {},
-    { 
-        repeat: { 
-            every: updateInterval * 60 * 1000 
-        }, 
-        jobId: 'scheduled-scrape',
-        removeOnComplete: true,
-        removeOnFail: false
-    }
-);
-
-// Graceful shutdown
+// Graceful shutdown - sadece Redis bağlantısını kapat
 const gracefulShutdown = async () => {
-    console.log('🛑 Kapatma sinyali alındı, temiz kapatma yapılıyor...');
+    console.log('🛑 Frontend kapatılıyor...');
     
     try {
-        // Queue'yu durdur
-        await scrapeQueue.close();
-        // Redis bağlantısını kapat
+        // Sadece Redis bağlantısını kapat
         await cacheService.redis.quit();
         
-        console.log('✅ Temiz kapatma tamamlandı');
+        console.log('✅ Frontend temiz kapatıldı');
         process.exit(0);
     } catch (error) {
         console.error('❌ Kapatma hatası:', error);
@@ -157,13 +121,13 @@ const gracefulShutdown = async () => {
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
-app.listen(PORT, () => {
-    console.log('🚀 Knight Online GB Price Scraper');
-    console.log(`📊 Server running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log('🚀 Knight Online GB Price Scraper - Frontend Server');
+    console.log(`📊 Frontend server running on port ${PORT}`);
     console.log(`🌐 Frontend: http://localhost:${PORT}`);
-    console.log(`🔄 Auto-update: every ${updateInterval} minutes`);
     console.log(`📈 API: http://localhost:${PORT}/api`);
-    console.log(`💾 Cache: ${process.env.REDIS_URL ? 'Remote Redis' : 'Local Redis'}`);
+    console.log(`💾 Cache: ${process.env.REDIS_URL ? 'Railway Redis' : 'Local Redis'}`);
+    console.log(`⚙️ Worker ayrı çalıştırılmalı: node worker.js`);
 });
 
 module.exports = app;

@@ -10,7 +10,7 @@ router.get('/prices', async (req, res) => {
     try {
         // Cache'ten hızlıca veri çek - blocking operation yok
         const data = await cacheService.getPriceData();
-        
+
         // Eğer cache boşsa bile hızlıca cevap ver
         const responseData = {
             success: true,
@@ -20,10 +20,10 @@ router.get('/prices', async (req, res) => {
             timestamp: new Date().toISOString(),
             cacheStatus: Object.keys(data.data || {}).length > 0 ? 'hit' : 'empty'
         };
-        
+
         // Hızlı response
         res.json(responseData);
-        
+
     } catch (error) {
         console.error('Error fetching cached prices:', error);
         // Hata durumunda bile hızlı cevap ver
@@ -44,7 +44,7 @@ router.get('/prices/best', async (req, res) => {
     try {
         const data = await cacheService.getPriceData();
         const bestPrices = scrapingService.getBestPrices(data.data || {});
-        
+
         res.json({
             success: true,
             data: bestPrices,
@@ -63,32 +63,27 @@ router.get('/prices/best', async (req, res) => {
     }
 });
 
-// Force price update - ASYNC BACKGROUND
+// Update endpoint - Worker'ın çalışıp çalışmadığını kontrol et
 router.post('/prices/update', async (req, res) => {
     try {
-        console.log('Manual price update requested');
-        
-        // Hemen queue'ya ekle ve cevap ver - beklemez
-        await scrapeQueue.add('manual-scrape', {}, {
-            attempts: 3,
-            backoff: {
-                type: 'exponential',
-                delay: 2000
-            }
-        });
-        
+        console.log('Manual price update requested - Worker kontrol ediliyor');
+
+        const data = await cacheService.getPriceData();
+
         res.json({
             success: true,
-            message: 'Price update queued successfully',
+            message: 'Update request logged. Worker should handle this separately.',
             timestamp: new Date().toISOString(),
-            note: 'Update is running in background'
+            note: 'Frontend is cache-only. Worker handles scraping.',
+            lastUpdate: data.lastUpdate,
+            isUpdating: data.isUpdating
         });
-        
+
     } catch (error) {
-        console.error('Error queueing update:', error);
+        console.error('Error checking cache:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to queue update',
+            error: 'Cache access failed',
             message: error.message
         });
     }
@@ -99,7 +94,7 @@ router.get('/prices/:site', async (req, res) => {
     try {
         const { site } = req.params;
         const data = await cacheService.getPriceData();
-        
+
         if (data.data && data.data[site]) {
             res.json({
                 success: true,
@@ -132,7 +127,7 @@ router.get('/prices/stats/summary', async (req, res) => {
     try {
         const data = await cacheService.getPriceData();
         const bestPrices = scrapingService.getBestPrices(data.data || {});
-        
+
         // Calculate overall statistics
         const allPrices = [];
         Object.values(data.data || {}).forEach(siteData => {
@@ -144,7 +139,7 @@ router.get('/prices/stats/summary', async (req, res) => {
                 });
             }
         });
-        
+
         const stats = {
             totalSites: Object.keys(data.data || {}).length,
             activeSites: Object.values(data.data || {}).filter(site => site.status === 'success').length,
@@ -157,7 +152,7 @@ router.get('/prices/stats/summary', async (req, res) => {
             isUpdating: data.isUpdating || false,
             cacheStatus: Object.keys(data.data || {}).length > 0 ? 'hit' : 'empty'
         };
-        
+
         res.json({
             success: true,
             stats,
@@ -192,7 +187,7 @@ router.get('/health', async (req, res) => {
     try {
         const data = await cacheService.getPriceData();
         const sitesStatus = {};
-        
+
         Object.entries(data.data || {}).forEach(([site, siteData]) => {
             sitesStatus[site] = {
                 status: siteData.status,
@@ -200,7 +195,7 @@ router.get('/health', async (req, res) => {
                 productCount: siteData.products ? siteData.products.length : 0
             };
         });
-        
+
         res.json({
             status: 'ok',
             uptime: process.uptime(),
