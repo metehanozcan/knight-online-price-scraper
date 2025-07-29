@@ -13,22 +13,37 @@ const scrapingService = require('./services/scrapingService');
 const priceController = require('./controllers/priceController');
 
 const app = express();
-app.set('trust proxy', true);
+
+// GÜVENLİ TRUST PROXY KONFİGÜRASYONU
+if (process.env.NODE_ENV === 'production') {
+    // Production'da sadece ilk proxy'yi güven (Railway, Heroku, etc. için)
+    app.set('trust proxy', 1);
+} else {
+    // Development'ta localhost için
+    app.set('trust proxy', 'loopback');
+}
+
 const PORT = process.env.PORT || 3000;
 
-// Başlangıçta cache'den veri yükle
+// HIZLI CACHE LOAD - NON-BLOCKING
 (async () => {
     try {
+        console.log('🔄 Loading cached data...');
         const cached = await cacheService.getPriceData();
+        
         if (cached.data && Object.keys(cached.data).length > 0) {
             scrapingService.priceData = cached.data;
             scrapingService.lastUpdate = cached.lastUpdate;
-            console.log(`✅ Başlangıçta ${Object.keys(cached.data).length} site verisi cache'den yüklendi`);
+            console.log('✅ Cached data loaded:', Object.keys(cached.data).length, 'sites');
         } else {
-            console.log('⚠️ Cache boş, ilk scraping bekleniyor...');
+            console.log('⚠️ No cached data found, will trigger initial scrape');
+            scrapingService.priceData = {};
+            scrapingService.lastUpdate = null;
         }
     } catch (err) {
-        console.error('❌ Başlangıç cache yükleme hatası:', err.message);
+        console.error('❌ Failed to load cached prices:', err.message);
+        scrapingService.priceData = {};
+        scrapingService.lastUpdate = null;
     }
 })();
 
@@ -40,8 +55,7 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
             scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'"] // API çağrıları için
+            imgSrc: ["'self'", "data:", "https:"]
         }
     }
 }));
@@ -50,24 +64,40 @@ app.use(helmet({
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
         ? ['https://yourdomain.com'] 
-        : true, // Development'ta tüm origin'lere izin ver
+        : ['http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true
 }));
 
-// Rate limiting - daha yüksek limit
+// GÜVENLİ RATE LIMITING
 const limiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 dakika
-    max: 100, // 100 istek
+    windowMs: (process.env.RATE_LIMIT_WINDOW || 15) * 60 * 1000,
+    max: process.env.RATE_LIMIT_MAX || 100,
+    
+    // Güvenli key generator - IP + User-Agent kombinasyonu
+    keyGenerator: (req) => {
+        const forwarded = req.ip || req.connection.remoteAddress;
+        const userAgent = req.get('User-Agent') || 'unknown';
+        // IP + User-Agent hash'i ile daha güvenli rate limiting
+        return `${forwarded}_${userAgent.substring(0, 50)}`;
+    },
+    
+    // Skip successful requests - sadece failed request'leri say
+    skipSuccessfulRequests: true,
+    
     message: {
-        error: 'Too many requests, please try again later.'
+        error: 'Too many requests, please try again later.',
+        retryAfter: 'Rate limit exceeded'
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => {
-        // Static dosyalar için rate limit yok
-        return req.path.startsWith('/static') || req.path.endsWith('.js') || req.path.endsWith('.css');
+    
+    // Rate limit aşıldığında log
+    onLimitReached: (req, res, options) => {
+        console.log(`Rate limit exceeded for IP: ${req.ip}, User-Agent: ${req.get('User-Agent')?.substring(0, 50)}`);
     }
 });
+
+// Sadece API endpoint'lerine rate limiting uygula
 app.use('/api', limiter);
 
 // Body parsing middleware
@@ -83,87 +113,120 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Health check endpoint - rate limit'e tabi değil
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        memory: process.memoryUsage()
+    });
+});
+
 // 404 handler
 app.use((req, res) => {
-    res.status(404).json({ error: 'Endpoint not found' });
+    res.status(404).json({ 
+        error: 'Endpoint not found',
+        path: req.path,
+        method: req.method
+    });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Error:', err);
+    
+    // Rate limit error'ı özel olarak handle et
+    if (err.code === 'ERR_ERL_PERMISSIVE_TRUST_PROXY') {
+        console.error('Trust proxy configuration error - this should not happen');
+        return res.status(500).json({
+            error: 'Server configuration error',
+            message: 'Trust proxy settings need adjustment'
+        });
+    }
+    
     res.status(500).json({ 
         error: 'Internal server error',
         message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
     });
 });
 
-// Schedule automatic price updates
-const updateInterval = parseInt(process.env.UPDATE_INTERVAL) || 10;
+// ARKAPLAN GÜNCELLEME SCHEDULING
+const updateInterval = process.env.UPDATE_INTERVAL || 10;
 
-// İlk scraping'i 30 saniye sonra yap
-setTimeout(async () => {
-    try {
-        const cached = await cacheService.getPriceData();
-        // Eğer cache boşsa veya 1 saatten eskiyse
-        const oneHourAgo = Date.now() - (60 * 60 * 1000);
-        const lastUpdateTime = cached.lastUpdate ? new Date(cached.lastUpdate).getTime() : 0;
-        
-        if (!cached.data || Object.keys(cached.data).length === 0 || lastUpdateTime < oneHourAgo) {
-            console.log('📊 İlk scraping başlatılıyor...');
-            await scrapeQueue.add('initial-scrape', {}, {
-                removeOnComplete: true,
-                removeOnFail: false
-            });
-        } else {
-            console.log('✅ Cache güncel, ilk scraping atlanıyor');
-        }
-    } catch (error) {
-        console.error('❌ İlk scraping hatası:', error);
-    }
-}, 30000);
-
-// Periyodik güncelleme
-scrapeQueue.add(
-    'scheduled-scrape',
-    {},
-    { 
-        repeat: { 
-            every: updateInterval * 60 * 1000 
-        }, 
-        jobId: 'scheduled-scrape',
-        removeOnComplete: true,
-        removeOnFail: false
-    }
-);
-
-// Graceful shutdown
-const gracefulShutdown = async () => {
-    console.log('🛑 Kapatma sinyali alındı, temiz kapatma yapılıyor...');
-    
-    try {
-        // Queue'yu durdur
-        await scrapeQueue.close();
-        // Redis bağlantısını kapat
-        await cacheService.redis.quit();
-        
-        console.log('✅ Temiz kapatma tamamlandı');
-        process.exit(0);
-    } catch (error) {
-        console.error('❌ Kapatma hatası:', error);
-        process.exit(1);
-    }
-};
-
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
-
-app.listen(PORT, () => {
+// Uygulama başladıktan sonra queue'yu kur
+app.listen(PORT, async () => {
     console.log('🚀 Knight Online GB Price Scraper');
     console.log(`📊 Server running on port ${PORT}`);
     console.log(`🌐 Frontend: http://localhost:${PORT}`);
     console.log(`🔄 Auto-update: every ${updateInterval} minutes`);
     console.log(`📈 API: http://localhost:${PORT}/api`);
-    console.log(`💾 Cache: ${process.env.REDIS_URL ? 'Remote Redis' : 'Local Redis'}`);
+    console.log(`🛡️ Trust proxy: ${app.get('trust proxy')}`);
+    
+    try {
+        // Schedule automatic price updates
+        await scrapeQueue.add(
+            'scheduled-scrape',
+            {},
+            { 
+                repeat: { every: updateInterval * 60 * 1000 },
+                jobId: 'scheduled-scrape',
+                removeOnComplete: 5,
+                removeOnFail: 3
+            }
+        );
+        console.log('✅ Scheduled updates configured');
+        
+        // İlk scrape'i 5 saniye sonra başlat (sadece cache boşsa)
+        setTimeout(async () => {
+            try {
+                const cached = await cacheService.getPriceData();
+                if (!cached.data || Object.keys(cached.data).length === 0) {
+                    console.log('🔄 Cache empty, triggering initial scrape...');
+                    await scrapeQueue.add('initial-scrape', {}, {
+                        attempts: 3,
+                        backoff: 'exponential'
+                    });
+                } else {
+                    console.log('✅ Cache has data, skipping initial scrape');
+                }
+            } catch (error) {
+                console.error('❌ Initial scrape setup failed:', error.message);
+            }
+        }, 5000);
+        
+    } catch (error) {
+        console.error('❌ Queue setup failed:', error.message);
+    }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    try {
+        await scrapeQueue.close();
+        console.log('Queue closed');
+    } catch (error) {
+        console.error('Error closing queue:', error.message);
+    }
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    console.log('SIGINT received, shutting down gracefully');
+    try {
+        await scrapeQueue.close();
+        console.log('Queue closed');
+    } catch (error) {
+        console.error('Error closing queue:', error.message);
+    }
+    process.exit(0);
+});
+
+// Unhandled rejection handler
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Uygulamayı crash ettirme, sadece log
 });
 
 module.exports = app;
