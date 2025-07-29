@@ -5,8 +5,7 @@ run = "npm run dev"
 channel = "stable-25_05"
 
 [deployment]
-run = ["sh", "-c", "bash railway-start.sh"]
-build = ["sh", "-c", "npm run build-css-prod"]
+run = ["sh", "-c", "npm run dev"]
 
 [workflows]
 runButton = "Frontend with CSS Build"
