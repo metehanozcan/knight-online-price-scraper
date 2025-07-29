@@ -797,9 +797,6 @@
                     // Cache boşsa empty state göster
                     setEmptyState();
                     console.log('Cache is empty, showing empty state');
-                    
-                    // Background update trigger et
-                    triggerBackgroundUpdate();
                 }
                 
             } catch (error) {
@@ -807,23 +804,8 @@
                 setEmptyState();
                 showError('Veriler alınırken hata oluştu, tekrar denenecek...');
                 
-                // Hata durumunda background update trigger et
-                setTimeout(triggerBackgroundUpdate, 2000);
-            }
-        }
-
-        async function triggerBackgroundUpdate() {
-            try {
-                console.log('Triggering background update...');
-                await fetch('/api/prices/update', { method: 'POST' });
-                console.log('Background update triggered');
-                
-                // 5 saniye sonra cache'i tekrar kontrol et
-                setTimeout(fetchPrices, 5000);
-            } catch (error) {
-                console.error('Failed to trigger background update:', error);
-                // 10 saniye sonra tekrar dene
-                setTimeout(triggerBackgroundUpdate, 10000);
+                // Hata durumunda veri daha sonra yeniden yüklenebilir
+                setTimeout(fetchPrices, 2000);
             }
         }
 
