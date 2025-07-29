@@ -1,4 +1,3 @@
-
 FROM node:20-bullseye-slim
 
 # Install Redis server and dependencies
@@ -34,8 +33,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies including Tailwind CSS
-RUN npm install
+# Install dependencies
+RUN npm ci --only=production
 
 # Copy source code
 COPY . .
@@ -45,15 +44,26 @@ RUN npx tailwindcss -i ./public/input.css -o ./public/output.css --minify
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3000
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
+# Railway uses PORT environment variable dynamically
+# Don't hardcode it
+
+# Create directories for Redis
+RUN mkdir -p /var/run/redis /var/log/redis /data && \
+    chown -R node:node /var/run/redis /var/log/redis /data
+
+# Switch to non-root user
+USER node
+
 # Create start script
 RUN echo '#!/bin/bash\n\
-redis-server --daemonize yes --bind 0.0.0.0\n\
-sleep 2\n\
-pm2-runtime start ecosystem.config.js' > /app/start.sh && \
+echo "Starting Redis..."\n\
+redis-server --daemonize yes --bind 127.0.0.1 --dir /data --logfile /var/log/redis/redis.log\n\
+sleep 3\n\
+echo "Redis started. Starting application..."\n\
+exec pm2-runtime start ecosystem.config.js' > /app/start.sh && \
 chmod +x /app/start.sh
 
 EXPOSE 3000
