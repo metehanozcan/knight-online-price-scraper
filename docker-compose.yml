@@ -3,6 +3,7 @@ services:
   ko-scraper:
     build: .
     container_name: knight-online-price-scraper
+    command: npm start
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -10,6 +11,16 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - REDIS_URL=redis://redis:6379?family=0
+
+  worker:
+    build: .
+    command: npm run worker
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379?family=0
+    depends_on:
+      - redis
 
   redis:
     image: redis:7
