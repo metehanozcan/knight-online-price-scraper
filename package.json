@@ -19,7 +19,8 @@
     "helmet": "^7.0.0",
     "ioredis": "^5.3.2",
     "node-cron": "^3.0.2",
-    "puppeteer": "^21.3.8"
+    "puppeteer": "^21.3.8",
+    "tailwindcss": "^4.1.11"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
