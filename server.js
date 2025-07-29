@@ -73,7 +73,22 @@ app.use('/api', limiter);
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(express.static('public'));
+
+// Static files with proper headers
+app.use(express.static('public', {
+    maxAge: '1d',
+    etag: false
+}));
+
+// Explicit CSS route for Railway
+app.get('/output.css', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'output.css'), {
+        headers: {
+            'Content-Type': 'text/css',
+            'Cache-Control': 'public, max-age=86400'
+        }
+    });
+});
 
 // Routes
 app.use('/api', priceController);

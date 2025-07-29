@@ -1,7 +1,9 @@
+
 FROM node:20-bullseye-slim
 
-# Chromium ve bağımlılıkları kur
+# Install Redis server and dependencies
 RUN apt-get update && apt-get install -y \
+    redis-server \
     chromium \
     ca-certificates \
     fonts-liberation \
@@ -24,24 +26,36 @@ RUN apt-get update && apt-get install -y \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# PM2'yi yükle
+# Install PM2 globally
 RUN npm install -g pm2
 
 WORKDIR /app
 
-# Puppeteer'ın Chromium indirmesini engelle
-ENV PUPPETEER_SKIP_DOWNLOAD=true
-
+# Copy package files
 COPY package*.json ./
+
+# Install dependencies including Tailwind CSS
 RUN npm install
 
+# Copy source code
 COPY . .
 
-# Puppeteer Chromium yolunu Railway'deki sistem Chromium'u gösterecek şekilde ayarla
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+# Build Tailwind CSS
+RUN npx tailwindcss -i ./public/input.css -o ./public/output.css --minify
+
+# Set environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
+# Create start script
+RUN echo '#!/bin/bash\n\
+redis-server --daemonize yes --bind 0.0.0.0\n\
+sleep 2\n\
+pm2-runtime start ecosystem.config.js' > /app/start.sh && \
+chmod +x /app/start.sh
 
 EXPOSE 3000
-CMD ["pm2-runtime", "ecosystem.config.js"]
+
+CMD ["/app/start.sh"]
