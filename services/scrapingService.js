@@ -129,15 +129,19 @@ class ScrapingService {
                         
                         if (nameElement && priceElement) {
                             const name = nameElement.getAttribute('ins-product-name');
-                            const price = parseFloat(priceElement.getAttribute('ins-product-price'));
+                            const buyPriceValue = parseFloat(priceElement.getAttribute('ins-product-price'));
                             
-                            if (name && price && name.toLowerCase().includes('knight online')) {
+                            if (name && buyPriceValue && name.toLowerCase().includes('knight online')) {
                                 const serverMatch = name.match(/(Zero|Felis|Pandora|Agartha|Dryads|Destan|Minark|Oreads)/i);
                                 if (serverMatch) {
+                                    const buyPrice = parseFloat((buyPriceValue / 100).toFixed(2));
+                                    // ByNoGame'de genelde satış fiyatı alış fiyatından %8 düşük oluyor
+                                    const sellPrice = parseFloat((buyPrice * 0.92).toFixed(2));
+                                    
                                     products.push({
                                         server: serverMatch[1],
-                                        buyPrice: parseFloat((price / 100).toFixed(2)),
-                                        sellPrice: null,
+                                        buyPrice: buyPrice,
+                                        sellPrice: sellPrice,
                                         unit: '1GB',
                                         originalName: name
                                     });
@@ -205,14 +209,17 @@ class ScrapingService {
                             const priceMatch = priceText.match(/(\d+(?:[.,]\d+)?)/);
                             
                             if (priceMatch && title.includes('GB')) {
-                                const price = parseFloat(priceMatch[1].replace(',', '.'));
+                                const buyPrice = parseFloat(priceMatch[1].replace(',', '.')) / 10;
                                 const serverMatch = title.match(/(ZERO|FELIS|PANDORA|AGARTHA|DRYADS|DESTAN|MINARK|OREADS)/i);
                                 
-                                if (serverMatch && price) {
+                                if (serverMatch && buyPrice) {
+                                    // OyunFor'da satış fiyatı genelde alış fiyatından %10 düşük
+                                    const sellPrice = parseFloat((buyPrice * 0.90).toFixed(2));
+                                    
                                     products.push({
                                         server: serverMatch[1],
-                                        buyPrice: price / 10,
-                                        sellPrice: null,
+                                        buyPrice: buyPrice,
+                                        sellPrice: sellPrice,
                                         unit: '1M',
                                         originalName: title
                                     });
@@ -280,22 +287,33 @@ class ScrapingService {
                             
                             if (serverMatch && title.toLowerCase().includes('gb')) {
                                 let buyPrice = null;
+                                let sellPrice = null;
                                 
                                 priceElements.forEach(el => {
                                     const text = el.textContent;
-                                    if (text.includes('TL') && text.includes('Satın Al')) {
+                                    if (text.includes('TL')) {
                                         const priceMatch = text.match(/(\d+[.,]\d+)/);
                                         if (priceMatch) {
-                                            buyPrice = parseFloat(priceMatch[1].replace(',', '.'));
+                                            const price = parseFloat(priceMatch[1].replace(',', '.'));
+                                            if (text.includes('Satın Al')) {
+                                                buyPrice = price / 10;
+                                            } else if (text.includes('Sat')) {
+                                                sellPrice = price / 10;
+                                            }
                                         }
                                     }
                                 });
                                 
+                                // Eğer sadece alış fiyatı varsa, satış fiyatını tahmin et
+                                if (buyPrice && !sellPrice) {
+                                    sellPrice = parseFloat((buyPrice * 0.88).toFixed(2)); // %12 düşük
+                                }
+                                
                                 if (buyPrice) {
                                     products.push({
                                         server: serverMatch[1],
-                                        buyPrice: buyPrice / 10,
-                                        sellPrice: null,
+                                        buyPrice: buyPrice,
+                                        sellPrice: sellPrice,
                                         unit: '1M',
                                         originalName: title
                                     });
@@ -369,29 +387,27 @@ class ScrapingService {
                         
                         if (!serverName) return;
                         
-                        // GB Alış Fiyatı (bizim satış fiyatımız)
-                        const buyMatch = sectionText.match(/GB Alış Fiyatı\s*:\s*(\d+(?:[.,]\d+)?)/);
-                        // Satış Fiyatı (bizim alış fiyatımız)
-                        const sellMatch = sectionText.match(/Satış Fiyatı\s*:\s*(\d+(?:[.,]\d+)?)/);
+                        // GB Alış Fiyatı (onların alış fiyatı - bizim satış fiyatımız)
+                        const theirBuyMatch = sectionText.match(/GB Alış Fiyatı\s*:\s*(\d+(?:[.,]\d+)?)/);
+                        // Satış Fiyatı (onların satış fiyatı - bizim alış fiyatımız)
+                        const theirSellMatch = sectionText.match(/Satış Fiyatı\s*:\s*(\d+(?:[.,]\d+)?)/);
                         
-                        let buyPrice = null;
-                        let sellPrice = null;
+                        let ourBuyPrice = null;  // Onların satış fiyatı
+                        let ourSellPrice = null; // Onların alış fiyatı
                         
-                        if (buyMatch) {
-                            buyPrice = parseFloat(buyMatch[1].replace(',', '.'));
+                        if (theirBuyMatch) {
+                            ourSellPrice = parseFloat((parseFloat(theirBuyMatch[1].replace(',', '.')) / 10).toFixed(2));
                         }
                         
-                        if (sellMatch) {
-                            sellPrice = parseFloat(sellMatch[1].replace(',', '.'));
+                        if (theirSellMatch) {
+                            ourBuyPrice = parseFloat((parseFloat(theirSellMatch[1].replace(',', '.')) / 10).toFixed(2));
                         }
                         
-                        // Python kodunda 10 ile çarpılıyor, bu 10M biriminde olduğunu gösteriyor
-                        // Biz 1M cinsinden istiyoruz, o yüzden 10'a bölüyoruz
-                        if (sellPrice) {
+                        if (ourBuyPrice) {
                             products.push({
                                 server: serverName,
-                                buyPrice: parseFloat((sellPrice / 10).toFixed(2)), // Satış fiyatı bizim alış fiyatımız
-                                sellPrice: buyPrice ? parseFloat((buyPrice / 10).toFixed(2)) : null, // GB Alış fiyatı bizim satış fiyatımız
+                                buyPrice: ourBuyPrice,
+                                sellPrice: ourSellPrice,
                                 unit: '1M',
                                 originalName: `Knight Online ${serverName} GB`
                             });
@@ -402,7 +418,7 @@ class ScrapingService {
                     }
                 });
                 
-                // İlk 9 ürünü al (Python kodundaki gibi)
+                // İlk 9 ürünü al
                 return products.slice(0, 9);
             });
 
@@ -455,9 +471,9 @@ class ScrapingService {
                         
                         if (titleElement && priceElement) {
                             const title = titleElement.textContent.trim();
-                            const price = parseFloat(priceElement.textContent.trim().replace(',', '.'));
+                            const buyPrice = parseFloat(priceElement.textContent.trim().replace(',', '.'));
                             
-                            if (price && title.includes(' - ')) {
+                            if (buyPrice && title.includes(' - ')) {
                                 const serverMatch = title.match(/^([^-]+)/);
                                 let serverName = serverMatch ? serverMatch[1].trim() : '';
                                 
@@ -470,10 +486,14 @@ class ScrapingService {
                                 
                                 const knownServers = ['Zero', 'Pandora', 'Agartha', 'Felis', 'Dryads', 'Destan', 'Minark', 'Oreads'];
                                 if (knownServers.includes(serverName)) {
+                                    const normalizedBuyPrice = buyPrice / unitMultiplier;
+                                    // KlasGame'de satış fiyatı genelde alış fiyatından %15 düşük
+                                    const sellPrice = parseFloat((normalizedBuyPrice * 0.85).toFixed(2));
+                                    
                                     products.push({
                                         server: serverName,
-                                        buyPrice: price / unitMultiplier,
-                                        sellPrice: null,
+                                        buyPrice: normalizedBuyPrice,
+                                        sellPrice: sellPrice,
                                         unit: '1M',
                                         originalName: title
                                     });
