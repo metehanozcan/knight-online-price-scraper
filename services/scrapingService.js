@@ -41,8 +41,9 @@ class ScrapingService {
                 '--aggressive-cache-discard',
                 '--memory-pressure-off'
             ],
-            timeout: 120000,
-            protocolTimeout: 120000
+            // Some sites are quite heavy, use generous timeouts
+            timeout: 180000,
+            protocolTimeout: 180000
         });
 
         return this.browserInstance;
@@ -52,9 +53,9 @@ class ScrapingService {
         const browser = await this.createBrowser();
         const page = await browser.newPage();
         
-        // Aggressive timeouts
-        await page.setDefaultNavigationTimeout(90000);
-        await page.setDefaultTimeout(90000);
+        // Generous timeouts to reduce page.evaluate failures
+        await page.setDefaultNavigationTimeout(150000);
+        await page.setDefaultTimeout(150000);
         
         // Lightweight viewport
         await page.setViewport({ width: 800, height: 600 });
