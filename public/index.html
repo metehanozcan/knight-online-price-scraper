@@ -4,8 +4,226 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Knight Online GB Fiyat Takipçisi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="output.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        'gold': '#fbbf24',
+                        'gold-dark': '#f59e0b',
+                        'gold-light': '#fef3c7',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.6s ease-out',
+                        'slide-down': 'slideDown 0.3s ease-out',
+                        'bounce-subtle': 'bounceSubtle 2s infinite',
+                        'gold-shimmer': 'goldShimmer 2s infinite',
+                        'pulse-gold': 'pulseGold 2s infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        slideDown: {
+                            '0%': { opacity: '0', transform: 'translateY(-10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        bounceSubtle: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' }
+                        },
+                        goldShimmer: {
+                            '0%': { backgroundPosition: '-200% 0' },
+                            '100%': { backgroundPosition: '200% 0' }
+                        },
+                        pulseGold: {
+                            '0%, 100%': { boxShadow: '0 0 0 0 rgba(251, 191, 36, 0.7)' },
+                            '50%': { boxShadow: '0 0 0 10px rgba(251, 191, 36, 0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            transition: all 0.3s ease;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .table-row {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .table-row:hover {
+            transform: translateX(2px) scale(1.002);
+        }
+        
+        @media (min-width: 768px) {
+            .table-row:hover {
+                transform: translateX(4px) scale(1.005);
+            }
+        }
+        
+        .best-price-glow {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+        }
+        
+        .gold-gradient {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+            background-size: 200% 200%;
+            animation: goldShimmer 3s ease-in-out infinite;
+        }
+        
+        .dropdown-enter {
+            animation: slideDown 0.2s ease-out;
+        }
+        
+        .glass-effect {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .dark .glass-effect {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+        
+        .gold-bar-3d {
+            background: linear-gradient(45deg, #fbbf24, #f59e0b, #d97706, #fbbf24);
+            background-size: 400% 400%;
+            animation: goldShimmer 3s infinite;
+            box-shadow: 
+                0 4px 8px rgba(0, 0, 0, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.3),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        .gold-bar-3d::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            height: 2px;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.8), transparent);
+            border-radius: 2px;
+        }
+        
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            font-size: 16px; /* Prevent zoom on iOS */
+        }
+        
+        .server-btn {
+            position: relative;
+            overflow: hidden;
+            min-height: 44px; /* Touch-friendly */
+            min-width: 44px;
+        }
+        
+        .server-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .server-btn:hover::before {
+            left: 100%;
+        }
+        
+        .server-btn-active {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+            transform: scale(1.05);
+        }
+        
+        .server-btn-active::before {
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        }
+        
+        /* Mobile-specific styles */
+        @media (max-width: 767px) {
+            .mobile-table {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            
+            .mobile-card {
+                display: block;
+                border: 1px solid rgba(251, 191, 36, 0.2);
+                border-radius: 12px;
+                margin-bottom: 16px;
+                padding: 16px;
+                background: rgba(255, 255, 255, 0.9);
+                backdrop-filter: blur(10px);
+            }
+            
+            .dark .mobile-card {
+                background: rgba(15, 23, 42, 0.9);
+                border-color: rgba(51, 65, 85, 0.5);
+            }
+            
+            .hero-mobile {
+                padding: 2rem 0;
+            }
+            
+            .stats-mobile {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+            
+            .filters-mobile {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(251, 191, 36, 0.6);
+            border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(251, 191, 36, 0.8);
+        }
+    </style>
 </head>
 <body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 transition-all duration-300">
     <!-- Header -->
@@ -24,7 +242,7 @@
                         <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Gerçek zamanlı fiyat karşılaştırması</p>
                     </div>
                 </div>
-
+                
                 <!-- Theme Toggle -->
                 <div class="flex items-center space-x-2 sm:space-x-3">
                     <div class="hidden sm:flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
@@ -33,7 +251,7 @@
                     </div>
                     <button id="theme-toggle" class="p-2 rounded-lg bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all duration-200 group min-h-[44px] min-w-[44px] flex items-center justify-center">
                         <svg id="sun-icon" class="w-5 h-5 text-yellow-500 dark:hidden group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z"/>
+                            <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z"/>
                         </svg>
                         <svg id="moon-icon" class="w-5 h-5 text-slate-400 hidden dark:block group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z"/>
@@ -59,7 +277,7 @@
                     Sunucunuzu seçin ve anında sonuçları görün
                 </div>
             </div>
-
+            
             <!-- Server Buttons -->
             <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 mb-4">
                 <button id="server-btn-all" class="server-btn server-btn-active px-3 py-3 sm:px-6 rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 col-span-2 sm:col-span-1">
@@ -69,40 +287,40 @@
                     <span class="hidden sm:inline">Tüm Sunucular</span>
                     <span class="sm:hidden">Tümü</span>
                 </button>
-
+                
                 <button id="server-btn-ZERO" class="server-btn bg-red-500 hover:bg-red-600 text-white px-3 py-3 sm:px-5 rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900" data-server="ZERO">
                     Zero
                 </button>
-
+                
                 <button id="server-btn-FELIS" class="server-btn bg-orange-500 hover:bg-orange-600 text-white px-3 py-3 sm:px-5 rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900" data-server="FELIS">
                     Felis
                 </button>
-
+                
                 <button id="server-btn-PANDORA" class="server-btn bg-purple-500 hover:bg-purple-600 text-white px-3 py-3 sm:px-5 rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900" data-server="PANDORA">
                     Pandora
                 </button>
-
+                
                 <button id="server-btn-AGARTHA" class="server-btn bg-blue-500 hover:bg-blue-600 text-white px-3 py-3 sm:px-5 rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900" data-server="AGARTHA">
                     Agartha
                 </button>
-
+                
                 <button id="server-btn-DRYADS" class="server-btn bg-green-500 hover:bg-green-600 text-white px-3 py-3 sm:px-5 rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900" data-server="DRYADS">
                     Dryads
                 </button>
-
+                
                 <button id="server-btn-DESTAN" class="server-btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-3 sm:px-5 rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900" data-server="DESTAN">
                     Destan
                 </button>
-
+                
                 <button id="server-btn-MINARK" class="server-btn bg-pink-500 hover:bg-pink-600 text-white px-3 py-3 sm:px-5 rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900" data-server="MINARK">
                     Minark
                 </button>
-
+                
                 <button id="server-btn-OREADS" class="server-btn bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-3 sm:px-5 rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900" data-server="OREADS">
                     Oreads
                 </button>
             </div>
-
+            
             <!-- Active Filter Info -->
             <div id="filter-info" class="text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-slate-800 rounded-lg px-4 py-2">
                 <svg class="w-4 h-4 inline mr-2" fill="currentColor" viewBox="0 0 24 24">
@@ -161,7 +379,8 @@
                     <div>
                         <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">En Yüksek Satış Fiyatı</div>
                         <div id="best-sell-price-display" class="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent animate-bounce-subtle">
-                            --
+                            Yükleniyor...
+
                         </div>
                     </div>
                     <div id="best-sell-site-display" class="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800">
@@ -240,7 +459,7 @@
                     <p id="avg-price" class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">--</p>
                 </div>
             </div>
-
+            
             <div class="glass-effect rounded-xl p-4 sm:p-6 group hover:scale-105 transition-transform duration-200">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -254,7 +473,7 @@
                     <p id="price-diff" class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">--</p>
                 </div>
             </div>
-
+            
             <div class="glass-effect rounded-xl p-4 sm:p-6 group hover:scale-105 transition-transform duration-200">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -273,8 +492,7 @@
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
                         <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 24 24">
-                            <path```
- d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
                         </svg>
                     </div>
                 </div>
@@ -312,14 +530,14 @@
                     </div>
                 </div>
             </div>
-
+            
             <!-- Mobile View -->
             <div id="mobile-view" class="block sm:hidden">
                 <div id="mobile-price-list" class="p-4 space-y-4">
                     <!-- Mobile cards will be inserted here -->
                 </div>
             </div>
-
+            
             <!-- Desktop View -->
             <div id="desktop-view" class="hidden sm:block overflow-x-auto custom-scrollbar">
                 <table class="w-full">
@@ -365,7 +583,7 @@
         }
 
         let currentTheme = localStorage.getItem('theme') || getSystemTheme();
-
+        
         function updateTheme() {
             if (currentTheme === 'dark') {
                 document.documentElement.classList.add('dark');
@@ -374,7 +592,7 @@
             }
             localStorage.setItem('theme', currentTheme);
         }
-
+        
         function toggleTheme() {
             currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
             updateTheme();
@@ -387,10 +605,10 @@
                 updateTheme();
             }
         });
-
+        
         // Initialize theme
         updateTheme();
-
+        
         // Utility Functions - NON-BLOCKING
         function showLoading() {
             // Sadece gerçek loading durumunda göster
@@ -428,13 +646,13 @@
         function applyFilters() {
             const serverFilter = document.getElementById('server-filter').value;
             const siteFilter = document.getElementById('site-filter').value;
-
+            
             filteredProducts = allProducts.filter(product => {
                 const serverMatch = !serverFilter || product.server.toUpperCase() === serverFilter;
                 const siteMatch = !siteFilter || product.siteKey === siteFilter;
                 return serverMatch && siteMatch;
             });
-
+            
             updateFilterInfo();
             renderTable();
         }
@@ -475,7 +693,7 @@
                             ${product.server}
                         </span>
                     </div>
-
+                    
                     <div class="grid grid-cols-2 gap-4">
                         <div class="text-center">
                             <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Alış Fiyatı</div>
@@ -489,7 +707,7 @@
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="mt-3 text-center">
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                             <div class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></div>
@@ -503,7 +721,7 @@
         function renderTable() {
             const tbody = document.getElementById('price-table-body');
             const mobileList = document.getElementById('mobile-price-list');
-
+            
             tbody.innerHTML = '';
             mobileList.innerHTML = '';
 
@@ -521,10 +739,10 @@
                         </div>
                     </div>
                 `;
-
+                
                 tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-16 text-center">${emptyContent}</td></tr>`;
                 mobileList.innerHTML = emptyContent;
-
+                
                 document.getElementById('best-buy-price-display').textContent = 'Veri Yok';
                 document.getElementById('best-sell-price-display').textContent = 'Veri Yok';
                 return;
@@ -536,10 +754,10 @@
 
             filteredProducts.forEach((product, index) => {
                 const isBest = index === 0;
-
+                
                 // Mobile card
                 mobileList.innerHTML += renderMobileCard(product, isBest);
-
+                
                 // Desktop row
                 const row = document.createElement('tr');
                 row.className = `table-row ${isBest ? 'best-price-glow' : 'hover:bg-gray-50 dark:hover:bg-slate-800/50'}`;
@@ -612,9 +830,9 @@
                 // Hızlı cache fetch - loading gösterme
                 const response = await fetch('/api/prices');
                 const data = await response.json();
-
+                
                 console.log('Cache response:', data.cacheStatus);
-
+                
                 // Cache'te veri varsa hemen göster
                 if (data.data && Object.keys(data.data).length > 0) {
                     updatePriceTable(data.data);
@@ -625,16 +843,16 @@
                     // Cache boşsa empty state göster
                     setEmptyState();
                     console.log('Cache is empty, showing empty state');
-
+                    
                     // Background update trigger et
                     triggerBackgroundUpdate();
                 }
-
+                
             } catch (error) {
                 console.error('Error fetching prices:', error);
                 setEmptyState();
                 showError('Veriler alınırken hata oluştu, tekrar denenecek...');
-
+                
                 // Hata durumunda background update trigger et
                 setTimeout(triggerBackgroundUpdate, 2000);
             }
@@ -645,7 +863,7 @@
                 console.log('Triggering background update...');
                 await fetch('/api/prices/update', { method: 'POST' });
                 console.log('Background update triggered');
-
+                
                 // 5 saniye sonra cache'i tekrar kontrol et
                 setTimeout(fetchPrices, 5000);
             } catch (error) {
@@ -661,16 +879,16 @@
             document.getElementById('best-buy-site-name').textContent = 'Veriler hazırlanıyor...';
             document.getElementById('best-sell-price-display').textContent = 'Yükleniyor...';
             document.getElementById('best-sell-site-name').textContent = 'Veriler hazırlanıyor...';
-
+            
             document.getElementById('avg-price').textContent = '--';
             document.getElementById('price-diff').textContent = '--';
             document.getElementById('active-sources').textContent = '0';
             document.getElementById('last-update').textContent = '--';
-
+            
             // Tablo boş state
             const tbody = document.getElementById('price-table-body');
             const mobileList = document.getElementById('mobile-price-list');
-
+            
             const emptyContent = `
                 <div class="flex flex-col items-center space-y-4 py-12">
                     <div class="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center animate-pulse">
@@ -684,20 +902,20 @@
                     </div>
                 </div>
             `;
-
+            
             tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-16 text-center">${emptyContent}</td></tr>`;
             mobileList.innerHTML = emptyContent;
         }
 
         function updatePriceTable(siteData) {
             console.log('Fiyat tablosu güncelleniyor:', siteData);
-
+            
             allProducts = [];
             let activeSources = 0;
-
+            
             Object.values(siteData).forEach(site => {
                 console.log(`Site işleniyor: ${site.name}, durum: ${site.status}, ürünler:`, site.products);
-
+                
                 if (site.status === 'success' && site.products && Array.isArray(site.products)) {
                     activeSources++;
                     site.products.forEach(product => {
@@ -715,15 +933,15 @@
             });
 
             document.getElementById('active-sources').textContent = activeSources;
-
+            
             console.log('Tüm ürünler:', allProducts);
-
+            
             applyFilters();
         }
 
         function updateStatistics(siteData) {
             const allPrices = [];
-
+            
             Object.values(siteData).forEach(site => {
                 if (site.status === 'success' && site.products) {
                     site.products.forEach(product => {
@@ -738,7 +956,7 @@
                 const avgPrice = allPrices.reduce((a, b) => a + b, 0) / allPrices.length;
                 const maxPrice = Math.max(...allPrices);
                 const minPrice = Math.min(...allPrices);
-
+                
                 document.getElementById('avg-price').textContent = `${avgPrice.toFixed(2)} ₺`;
                 document.getElementById('price-diff').textContent = `${(maxPrice - minPrice).toFixed(2)} ₺`;
             } else {
@@ -758,7 +976,7 @@
             document.getElementById('best-buy-site-name').textContent = 'Veriler getiriliyor...';
             document.getElementById('best-buy-server-name').textContent = '--';
             document.getElementById('best-buy-site-icon').textContent = '?';
-
+            
             document.getElementById('best-sell-price-display').textContent = 'Yükleniyor...';
             document.getElementById('best-sell-site-name').textContent = 'Veriler getiriliyor...';
             document.getElementById('best-sell-server-name').textContent = '--';
@@ -772,7 +990,7 @@
                 document.getElementById('best-buy-site-name').textContent = 'Henüz veri alınamadı';
                 document.getElementById('best-buy-server-name').textContent = '--';
                 document.getElementById('best-buy-site-icon').textContent = '?';
-
+                
                 document.getElementById('best-sell-price-display').textContent = 'Veri Yok';
                 document.getElementById('best-sell-site-name').textContent = 'Henüz veri alınamadı';
                 document.getElementById('best-sell-server-name').textContent = '--';
@@ -806,7 +1024,7 @@
                 document.getElementById('best-buy-price-display').textContent = `${bestBuyProduct.gbPrice.toFixed(2)} ₺`;
                 document.getElementById('best-buy-site-name').textContent = bestBuyProduct.siteName;
                 document.getElementById('best-buy-server-name').textContent = `${bestBuyProduct.server} Sunucusu`;
-
+                
                 const siteColor = siteColors[bestBuyProduct.siteName] || { bg: 'bg-gray-500', icon: '?' };
                 const buyIcon = document.getElementById('best-buy-site-icon');
                 buyIcon.className = `w-10 h-10 rounded-xl ${siteColor.bg} text-white flex items-center justify-center font-bold text-lg`;
@@ -818,7 +1036,7 @@
                 document.getElementById('best-sell-price-display').textContent = `${bestSellProduct.gbSellPrice.toFixed(2)} ₺`;
                 document.getElementById('best-sell-site-name').textContent = bestSellProduct.siteName;
                 document.getElementById('best-sell-server-name').textContent = `${bestSellProduct.server} Sunucusu`;
-
+                
                 const siteColor = siteColors[bestSellProduct.siteName] || { bg: 'bg-gray-500', icon: '?' };
                 const sellIcon = document.getElementById('best-sell-site-icon');
                 sellIcon.className = `w-10 h-10 rounded-xl ${siteColor.bg} text-white flex items-center justify-center font-bold text-lg`;
@@ -835,12 +1053,12 @@
         function selectServer(serverCode) {
             // Update dropdown value
             document.getElementById('server-filter').value = serverCode;
-
+            
             // Update button states
             document.querySelectorAll('.server-btn').forEach(btn => {
                 btn.classList.remove('server-btn-active');
             });
-
+            
             if (serverCode === '') {
                 document.getElementById('server-btn-all').classList.add('server-btn-active');
                 document.getElementById('filter-text').textContent = 'Tüm sunucular gösteriliyor';
@@ -848,7 +1066,7 @@
                 document.getElementById(`server-btn-${serverCode}`).classList.add('server-btn-active');
                 document.getElementById('filter-text').textContent = `${serverCode} sunucusu gösteriliyor`;
             }
-
+            
             // Apply filters
             applyFilters();
         }
@@ -858,7 +1076,7 @@
             document.getElementById('server-btn-all').addEventListener('click', () => {
                 selectServer('');
             });
-
+            
             // Individual server buttons
             const servers = ['ZERO', 'FELIS', 'PANDORA', 'AGARTHA', 'DRYADS', 'DESTAN', 'MINARK', 'OREADS'];
             servers.forEach(server => {
@@ -874,9 +1092,9 @@
         function updateFilterInfo() {
             const serverFilter = document.getElementById('server-filter').value;
             const siteFilter = document.getElementById('site-filter').value;
-
+            
             let filterText = '';
-
+            
             if (serverFilter && siteFilter) {
                 filterText = `${serverFilter} sunucusu, ${getSiteName(siteFilter)} sitesi gösteriliyor`;
             } else if (serverFilter) {
@@ -886,7 +1104,7 @@
             } else {
                 filterText = 'Tüm sunucular gösteriliyor';
             }
-
+            
             document.getElementById('filter-text').textContent = filterText;
         }
 
@@ -906,17 +1124,17 @@
             // Hemen cache'ten veri çek
             fetchPrices();
             setupServerButtons();
-
+            
             document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-
+            
             // Sync dropdown with buttons when changed manually
             document.getElementById('server-filter').addEventListener('change', () => {
                 const selectedServer = document.getElementById('server-filter').value;
                 selectServer(selectedServer);
             });
-
+            
             document.getElementById('site-filter').addEventListener('change', applyFilters);
-
+            
             // Auto refresh every 30 seconds - sadece cache'i kontrol et
             setInterval(fetchPrices, 30 * 1000);
         });

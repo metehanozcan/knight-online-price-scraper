@@ -1,7 +1,7 @@
 const { Queue } = require('bullmq');
 const Redis = require('ioredis');
 
-let redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+let redisUrl = process.env.REDIS_URL || '${{ Redis.REDIS_URL }}';
 
 // ✅ Railway IPv6 fix
 if (!redisUrl.includes('family=')) {
