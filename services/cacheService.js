@@ -1,22 +1,13 @@
 const Redis = require('ioredis');
-
-let redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-
-// ✅ Railway IPv6 + IPv4 dual stack fix
-if (!redisUrl.includes('family=')) {
-  redisUrl += redisUrl.includes('?') ? '&family=0' : '?family=0';
-}
-
-// TLS desteği (Railway rediss:// ise güvenli bağlanır)
-const redis = new Redis(redisUrl, {
-  tls: redisUrl.startsWith('rediss://') ? {} : undefined
-});
-
-redis.on('connect', () => console.log('✅ Redis bağlandı:', redisUrl));
-redis.on('error', (err) => console.error('❌ Redis hata:', err.message));
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 async function setPriceData(data) {
-  await redis.set('price-data', JSON.stringify(data));
+  const payload = {
+    data,
+    lastUpdate: Date.now(),
+    isUpdating: false,
+  };
+  await redis.set('price-data', JSON.stringify(payload));
 }
 
 async function getPriceData() {
@@ -24,11 +15,13 @@ async function getPriceData() {
   if (!raw) {
     return { data: {}, lastUpdate: null, isUpdating: false };
   }
-  try {
-    return JSON.parse(raw);
-  } catch (err) {
-    return { data: {}, lastUpdate: null, isUpdating: false };
-  }
+  return JSON.parse(raw);
 }
 
-module.exports = { setPriceData, getPriceData };
+async function setUpdating(flag = true) {
+  const current = await getPriceData();
+  current.isUpdating = flag;
+  await redis.set('price-data', JSON.stringify(current));
+}
+
+module.exports = { setPriceData, getPriceData, setUpdating };
