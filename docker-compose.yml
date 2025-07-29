@@ -9,7 +9,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=${{ Redis.REDIS_URL }}
 
   redis:
     image: redis:7

@@ -41,6 +41,7 @@ COPY . .
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV REDIS_URL=${{ Redis.REDIS_URL }}
 
 EXPOSE 3000
 CMD ["pm2-runtime", "ecosystem.config.js"]
